@@ -488,7 +488,9 @@ pub struct Item {
     /// Its name was given without waiting for its folder to be looked at (Download File Info:
     /// a sleeping drive or a network folder can take seconds to answer, #743): nothing of its
     /// own is on the disk yet, and it starts under that name or the next free numbered one, as
-    /// the engine finds as it starts (`Destination::Free`). Cleared once the file is made.
+    /// the engine finds as it starts (`Destination::Free`). Cleared once the file is made. A
+    /// video's (Download video's name, given before its folder was read) is numbered on past the
+    /// files there beside the window, before it starts (videoplace.rs); cleared then.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub number_at_start: bool,
     /// The file the user chose to replace with this download (#1088: Download File Info's Save
@@ -575,6 +577,16 @@ pub struct Item {
     /// restarts so a requeued or resumed folder rename still checks for untracked files.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) written_files: Option<Vec<PathBuf>>,
+    /// Whether its resume state is at its place, as read beside the window at start
+    /// (resumeread.rs): the place read and the answer. Until that read comes it is taken as there
+    /// (the safe side: the row keeps its place, and no other row takes it), and it is forgotten as
+    /// the row starts (its run makes or removes the state). Memory only.
+    #[serde(skip)]
+    pub(crate) state_here: Option<(PathBuf, bool)>,
+    /// A copy ([`Item::place_copy`]) of a row that was running: it holds its place as the row
+    /// does ([`Item::holds_place`]). Memory only.
+    #[serde(skip)]
+    pub(crate) live_copy: bool,
 }
 
 /// Adds `more` to a download's `written_files`, each path once, in order. A gallery lists up to
@@ -957,6 +969,9 @@ impl Item {
         c.remote.clone_from(&self.remote);
         c.preexisting_folder = self.preexisting_folder;
         c.written_files.clone_from(&self.written_files);
+        c.number_at_start = self.number_at_start;
+        c.state_here.clone_from(&self.state_here);
+        c.live_copy = self.live.is_some() || self.live_copy;
         c
     }
 
@@ -1008,11 +1023,19 @@ impl Item {
             preloaded: None,
             side_files: Vec::new(),
             written_files: None,
+            state_here: None,
+            live_copy: false,
         }
     }
     /// This row's resume state is at its place. `downloaded` can't say: after a crash the list
-    /// holds what it held at its last save, often nothing.
+    /// holds what it held at its last save, often nothing. As read beside the window at start
+    /// while that holds (`state_here`), else from the disk.
     pub fn owns_resume_state(&self) -> bool {
+        if let Some((at, here)) = &self.state_here
+            && *at == self.dest
+        {
+            return *here;
+        }
         let state = mdm_engine::state::state_path(&self.dest);
         mdm_engine::state::ResumeState::load(&state).is_ok_and(|s| s.url == self.url)
     }
@@ -1022,6 +1045,7 @@ impl Item {
     /// nothing: several may wait under one name, and the first to start keeps it.
     pub fn holds_place(&self) -> bool {
         self.live.is_some()
+            || self.live_copy
             || if self.status == Status::Complete {
                 self.dest.exists()
             } else {
