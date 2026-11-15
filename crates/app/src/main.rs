@@ -557,8 +557,9 @@ fn app() -> eframe::Result {
         // sign out, an installer's Restart Manager): before Windows is answered. Linux (logout,
         // shutdown): logind's SIGTERM at the next frame (`Shared::logic`, heard since the start:
         // `unix::on_session_end`), or the X server going away (GNOME's ends at logout before the
-        // SIGTERM comes) at once; Wayland's lost connection ends winit's loop, and eframe drops
-        // the app, which saves as an Exit does. macOS: AppKit's terminate at logout reaches
+        // SIGTERM comes) as soon as winit or Xlib finds out (`unix::on_display_lost`); Wayland's
+        // lost connection ends winit's loop, and eframe drops the app, which saves as an Exit
+        // does (unchecked). macOS: AppKit's terminate at logout reaches
         // eframe as winit's exit, which drops the app (`Drop` saves as an Exit does, and tells
         // the crash monitor the exit was clean: #1125); signals aren't how macOS ends a session.
         #[cfg(windows)]

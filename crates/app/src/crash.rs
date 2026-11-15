@@ -149,6 +149,12 @@ fn hook_panics() {
         tracing::error!("panic: {} at {} ({})", p.message, p.location, p.thread);
         // In the file before the report reads the log's end (the log writes on its own thread).
         mdm_crash::logs::flush(LOG_FOR_A_REPORT);
+        // Linux: winit's calls on an X server that went away (logout) panic on the window's
+        // thread: the session's end, saved as one, not a crash (it never returns).
+        #[cfg(target_os = "linux")]
+        if crate::unix::display_lost_panic(&p.thread) {
+            crate::unix::end_display_lost();
+        }
         if !panic_reported(CLOSING.load(Ordering::Acquire), &p.thread) {
             default(info);
             return;

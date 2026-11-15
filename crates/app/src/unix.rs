@@ -228,18 +228,22 @@ thread_local! {
         const { std::cell::RefCell::new(None) };
 }
 
-/// Linux, X11 (XWayland too): when the X server goes away (at logout, before logind's SIGTERM),
-/// run `end` on the window's thread, then MDM ends. Xlib calls its I/O error handler then, from
-/// inside winit's event loop between two frames, and its default one ends the program
-/// (`exit(1)`, unsaved, which the crash monitor reported). Call it on the window's thread once
-/// the window is open (winit has loaded Xlib then). Wayland's windows: winit's event loop ends
-/// on its own when the connection is lost and eframe drops the app, which saves as Exit does.
+/// Linux, X11 (XWayland too): when the X server goes away (GNOME's at logout, before logind's
+/// SIGTERM comes), run `end` on the window's thread, then MDM ends ([`end_display_lost`]). Call
+/// it on the window's thread once the window is open (winit has loaded Xlib then). It is heard
+/// two ways, whichever comes first: winit's own calls on the lost connection fail and panic on
+/// the window's thread (`inner_size`'s unwrap, crash.rs asks [`display_lost_panic`]); or Xlib
+/// sees it and calls its I/O error handler, whose default one ends the program (`exit(1)`).
+/// Either way MDM ended unsaved or with a crash report. Wayland's windows: winit's event loop
+/// ends on its own when the connection is lost, and eframe drops the app, which saves as an
+/// Exit does.
 #[cfg(target_os = "linux")]
 #[allow(unsafe_code)]
 pub fn on_display_lost(end: impl FnOnce() + 'static) {
     if on_wayland() {
         return;
     }
+    DISPLAY_LOST.with(|d| *d.borrow_mut() = Some(Box::new(end)));
     type IoErrorHandler = unsafe extern "C" fn(*mut std::ffi::c_void) -> libc::c_int;
     type SetIoErrorHandler = unsafe extern "C" fn(Option<IoErrorHandler>) -> Option<IoErrorHandler>;
     // SAFETY: a NUL-terminated name; RTLD_NOLOAD only finds the library winit already loaded
@@ -251,31 +255,48 @@ pub fn on_display_lost(end: impl FnOnce() + 'static) {
         )
     };
     if lib.is_null() {
-        tracing::warn!("the display's end isn't heard: Xlib isn't loaded");
+        tracing::warn!("Xlib's end of the display isn't heard: Xlib isn't loaded");
         return;
     }
     // SAFETY: the handle dlopen just gave; a NUL-terminated name.
     let set = unsafe { libc::dlsym(lib, c"XSetIOErrorHandler".as_ptr()) };
     if set.is_null() {
-        tracing::warn!("the display's end isn't heard: no XSetIOErrorHandler");
+        tracing::warn!("Xlib's end of the display isn't heard: no XSetIOErrorHandler");
         return;
     }
-    DISPLAY_LOST.with(|d| *d.borrow_mut() = Some(Box::new(end)));
     // SAFETY: the symbol is Xlib's XSetIOErrorHandler, of this signature (Xlib.h).
     let set = unsafe { std::mem::transmute::<*mut std::ffi::c_void, SetIoErrorHandler>(set) };
     // SAFETY: the handler is a function of the signature Xlib calls, for the program's life.
-    unsafe { set(Some(display_lost)) };
+    unsafe { set(Some(xlib_lost_display)) };
 }
 
-/// Xlib's I/O error handler ([`on_display_lost`]): the X server's connection is lost. It must not
-/// return (Xlib would end the program): it runs the end, then ends the program itself, without
-/// the libraries' exit handlers, which would only touch the lost display again.
+/// Xlib's I/O error handler ([`on_display_lost`]): the X server's connection is lost. It must
+/// not return (Xlib would end the program).
 #[cfg(target_os = "linux")]
 #[allow(unsafe_code)]
-unsafe extern "C" fn display_lost(_display: *mut std::ffi::c_void) -> libc::c_int {
-    tracing::warn!("the display went away (the X server's connection is lost)");
+unsafe extern "C" fn xlib_lost_display(_display: *mut std::ffi::c_void) -> libc::c_int {
+    tracing::warn!("the display went away (Xlib: the X server's connection is lost)");
+    end_display_lost()
+}
+
+/// Linux: whether a panic on `thread` is winit's on a lost display ([`on_display_lost`]): on the
+/// window's thread, with MDM's windows on X11 and its X server gone (a new connection to it is
+/// refused). Then it's the session's end, not a crash: [`end_display_lost`] instead of a report.
+#[cfg(target_os = "linux")]
+pub fn display_lost_panic(thread: &str) -> bool {
+    thread == "main"
+        && DISPLAY_LOST.with(|d| d.try_borrow().is_ok_and(|d| d.is_some()))
+        && x11rb::rust_connection::RustConnection::connect(None).is_err()
+}
+
+/// The display went away: the end ([`on_display_lost`]'s, on the window's thread, once), then MDM
+/// ends at once, without the libraries' exit handlers, which would only touch the lost display
+/// again. Elsewhere, or again: MDM ends as it is.
+#[cfg(target_os = "linux")]
+#[allow(unsafe_code)]
+pub fn end_display_lost() -> ! {
+    tracing::warn!("the display went away: MDM saves and ends with it");
     ask_end(SessionEnd::DisplayLost);
-    // On the window's thread, once: it runs the end. Elsewhere, or again: MDM ends as it is.
     let end = DISPLAY_LOST.with(|d| d.try_borrow_mut().ok().and_then(|mut d| d.take()));
     let code = match end {
         Some(end) => match std::panic::catch_unwind(std::panic::AssertUnwindSafe(end)) {
