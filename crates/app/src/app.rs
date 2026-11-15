@@ -11455,9 +11455,10 @@ impl Drop for App {
 }
 
 /// How long the session's end may take ([`App::end_session`]): Windows lists a program that
-/// takes 5 s over it as one that keeps the computer from shutting down. Windows only so far
-/// (main.rs says what Linux and macOS do).
-#[cfg(windows)]
+/// takes 5 s over it as one that keeps the computer from shutting down. Linux's logind gives
+/// 90 s between its SIGTERM and its SIGKILL by default, some desktops less: the same 4 s there.
+/// (macOS: main.rs.)
+#[cfg(any(windows, target_os = "linux"))]
 const SESSION_END: Duration = Duration::from_millis(4000);
 
 /// What of [`SESSION_END`] is kept for writing the list, after the downloads' last saves.
@@ -11468,10 +11469,12 @@ const EXIT_STOP_WAIT: Duration = Duration::from_secs(10);
 
 impl App {
     /// The session is ending (Windows: shut down, restart, sign out, or an installer closing
-    /// MDM through the Restart Manager; `win32::on_session_end`): what an Exit does at its end,
-    /// now, within [`SESSION_END`], on the window's thread between two frames. Nobody is there to
-    /// answer a question: nothing is asked. The process ends right after (main.rs).
-    #[cfg(windows)]
+    /// MDM through the Restart Manager; `win32::on_session_end`. Linux: logout or shutdown,
+    /// whose SIGTERM or lost display `unix::on_session_end` and `unix::on_display_lost` hear):
+    /// what an Exit does at its end, now, within [`SESSION_END`], on the window's thread between
+    /// two frames. Nobody is there to answer a question: nothing is asked. The process ends
+    /// right after (main.rs).
+    #[cfg(any(windows, target_os = "linux"))]
     pub fn end_session(&mut self) {
         tracing::info!("the session is ending: stopping the downloads and saving the list");
         self.exiting = true;
@@ -11511,10 +11514,7 @@ impl App {
         // No wake for a queue MDM won't be there to start (Linux's alarm would outlive it).
         self.wake.clear();
         self.keep_unseen();
-        let saves_by = deadline.map_or(began + EXIT_STOP_WAIT, |d| {
-            d.checked_sub(SESSION_END_LIST).unwrap_or(d)
-        });
-        let unsaved = self.wait_stopped(&stopping, saves_by);
+        let unsaved = self.wait_stopped(&stopping, saves_by(began, deadline));
         match (stopping.len(), unsaved) {
             (0, _) => {}
             (n, 0) => tracing::info!(
@@ -11585,6 +11585,15 @@ impl App {
             std::thread::sleep(Duration::from_millis(10));
         }
     }
+}
+
+/// Until when an end ([`App::finish`], begun at `began`) waits for the running downloads' last
+/// saves: an Exit [`EXIT_STOP_WAIT`]; the session's end until its `deadline` less the
+/// [`SESSION_END_LIST`] the list's write keeps.
+fn saves_by(began: Instant, deadline: Option<Instant>) -> Instant {
+    deadline.map_or(began + EXIT_STOP_WAIT, |d| {
+        d.checked_sub(SESSION_END_LIST).unwrap_or(d)
+    })
 }
 
 /// A download's run is over, its last state saved: done, failed or stopped.
@@ -12364,6 +12373,33 @@ mod trim_tests {
             })
             .collect();
         assert_eq!(times, [2, 120, 720, 1320]);
+    }
+}
+
+#[cfg(test)]
+mod end_tests {
+    use super::{EXIT_STOP_WAIT, SESSION_END_LIST, saves_by};
+    use std::time::{Duration, Instant};
+
+    /// An Exit waits 10 s for the downloads' last saves; the session's end (4 s on Windows and
+    /// Linux) gives them its budget less the list's 1.2 s, and a deadline shorter than the list's
+    /// share leaves them none past it.
+    #[test]
+    fn the_session_end_splits_its_budget_between_the_downloads_and_the_list() {
+        let began = Instant::now();
+        assert_eq!(saves_by(began, None), began + EXIT_STOP_WAIT);
+        assert_eq!(EXIT_STOP_WAIT, Duration::from_secs(10));
+        #[cfg(any(windows, target_os = "linux"))]
+        {
+            let deadline = began + super::SESSION_END;
+            assert_eq!(
+                saves_by(began, Some(deadline)),
+                began + Duration::from_millis(2800)
+            );
+            assert_eq!(deadline - saves_by(began, Some(deadline)), SESSION_END_LIST);
+        }
+        let soon = began + Duration::from_millis(500);
+        assert!(saves_by(began, Some(soon)) <= soon);
     }
 }
 
