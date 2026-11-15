@@ -570,12 +570,15 @@ fn app() -> eframe::Result {
         #[cfg(target_os = "linux")]
         {
             let app = std::rc::Rc::downgrade(&app);
-            unix::on_display_lost(move || {
+            unix::on_display_lost(cc, move || {
                 match app.upgrade() {
+                    // Busy in its frame: the next one (`Shared::logic`).
+                    Some(app) if app.try_borrow_mut().is_err() => return false,
                     Some(app) => drop(save_for_session_end(&app, unix::SessionEnd::DisplayLost)),
                     None => crash::clean_exit(),
                 }
                 mdm_crash::logs::flush(LOG_AT_THE_END);
+                true
             });
         }
         Shared(app)
@@ -590,13 +593,14 @@ struct Shared(std::rc::Rc<std::cell::RefCell<app::App>>);
 
 impl eframe::App for Shared {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        // Linux: the session ends (logind's SIGTERM, unix::on_session_end): saved before this
-        // frame does anything, and the process ends, as logind would end it.
+        // Linux: the session ends (logind's SIGTERM, unix::on_session_end; or the display went
+        // away during the last frame, unix::on_display_lost): saved before this frame does
+        // anything, and the process ends, as logind would end it.
         #[cfg(target_os = "linux")]
         if let Some(why) = unix::session_ending() {
             drop(save_for_session_end(&self.0, why));
             mdm_crash::logs::flush(LOG_AT_THE_END);
-            std::process::exit(0);
+            unix::exit_now(0);
         }
         eframe::App::logic(&mut *self.0.borrow_mut(), ctx, frame);
     }

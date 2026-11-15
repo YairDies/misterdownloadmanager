@@ -158,6 +158,7 @@ fn hear_signals(
     grace: Option<std::time::Duration>,
 ) {
     use tokio::signal::unix::{SignalKind, signal};
+    let _ = WAKE.set(wake.clone());
     for why in SessionEnd::ALL {
         let Some(sig) = why.signal() else { continue };
         if ignored(sig) {
@@ -188,6 +189,13 @@ fn end_asked(why: SessionEnd, wake: &dyn Fn(), grace: Option<std::time::Duration
         end_now();
     }
     tracing::info!("asked to end ({why:?}): the window saves and ends");
+    wait_for_the_window(wake, grace);
+}
+
+/// The end is asked of the window's thread: `wake` brings its next frame, which runs it; one
+/// that hasn't come within `grace` ends MDM without it.
+#[cfg(target_os = "linux")]
+fn wait_for_the_window(wake: &dyn Fn(), grace: Option<std::time::Duration>) {
     wake();
     let Some(grace) = grace else { return };
     let _ = std::thread::Builder::new()
@@ -197,6 +205,21 @@ fn end_asked(why: SessionEnd, wake: &dyn Fn(), grace: Option<std::time::Duration
             tracing::warn!("the window didn't end within {grace:?}: MDM ends without it");
             end_now();
         });
+}
+
+/// What wakes the window's thread ([`on_session_end`]'s), for the display's end too.
+#[cfg(target_os = "linux")]
+static WAKE: std::sync::OnceLock<std::sync::Arc<dyn Fn() + Send + Sync>> =
+    std::sync::OnceLock::new();
+
+/// Linux: the process ends now, once the session's end has saved (main.rs), without the
+/// libraries' exit handlers: with the display gone they would only touch it again, which runs
+/// Xlib's handler (and so the end) once more.
+#[cfg(target_os = "linux")]
+#[allow(unsafe_code)]
+pub fn exit_now(code: i32) -> ! {
+    // SAFETY: ends the process; the log was flushed by the caller.
+    unsafe { libc::_exit(code) }
 }
 
 /// MDM ends at once, the list and the downloads as last saved: the session's end, not a crash.
@@ -217,35 +240,48 @@ fn ignored(sig: libc::c_int) -> bool {
     read && old.sa_sigaction == libc::SIG_IGN
 }
 
-/// What the display going away runs ([`on_display_lost`]).
+/// What the display going away runs ([`on_display_lost`]): the end now, true; false when the app
+/// is busy in a frame of its own (the window's thread is in it), and nothing was done.
 #[cfg(target_os = "linux")]
-type OnDisplayLost = Box<dyn FnOnce()>;
+type OnDisplayLost = Box<dyn Fn() -> bool>;
 
 #[cfg(target_os = "linux")]
 thread_local! {
-    /// Taken when the display goes away, on the window's thread.
+    /// Run when the display goes away, on the window's thread.
     static DISPLAY_LOST: std::cell::RefCell<Option<OnDisplayLost>> =
         const { std::cell::RefCell::new(None) };
 }
 
-/// Linux, X11 (XWayland too): when the X server goes away (GNOME's at logout, before logind's
-/// SIGTERM comes), run `end` on the window's thread, then MDM ends ([`end_display_lost`]). Call
-/// it on the window's thread once the window is open (winit has loaded Xlib then). It is heard
-/// two ways, whichever comes first: winit's own calls on the lost connection fail and panic on
-/// the window's thread (`inner_size`'s unwrap, crash.rs asks [`display_lost_panic`]); or Xlib
-/// sees it and calls its I/O error handler, whose default one ends the program (`exit(1)`).
-/// Either way MDM ended unsaved or with a crash report. Wayland's windows: winit's event loop
-/// ends on its own when the connection is lost, and eframe drops the app, which saves as an
-/// Exit does.
+/// Xlib returns from its I/O error handler to the call that failed, instead of ending the
+/// program ([`on_display_lost`]: XSetIOErrorExitHandler, Xlib 1.7 and later).
+#[cfg(target_os = "linux")]
+static XLIB_RETURNS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Linux, X11 (XWayland too): when the X server of `display` (eframe's creation context) goes
+/// away (GNOME's at logout, before logind's SIGTERM comes), MDM saves as an Exit does and ends:
+/// `end` runs on the window's thread between two frames, or, when the display's end is found in
+/// the middle of one, the end waits for the next frame (`session_ending`), as a SIGTERM's does.
+/// Call it on the window's thread once the window is open. It is found two ways, whichever comes
+/// first: winit's own calls on the lost connection fail and panic on the window's thread
+/// (`inner_size`'s unwrap: crash.rs asks [`display_lost_panic`]); or Xlib sees it and calls its
+/// I/O error handler, whose default ends the program (`exit(1)`). Either way MDM ended unsaved,
+/// or with a crash report. Wayland's windows: winit's event loop ends on its own when the
+/// connection is lost, and eframe drops the app, which saves as an Exit does.
 #[cfg(target_os = "linux")]
 #[allow(unsafe_code)]
-pub fn on_display_lost(end: impl FnOnce() + 'static) {
+pub fn on_display_lost(
+    display: &impl raw_window_handle::HasDisplayHandle,
+    end: impl Fn() -> bool + 'static,
+) {
     if on_wayland() {
         return;
     }
     DISPLAY_LOST.with(|d| *d.borrow_mut() = Some(Box::new(end)));
     type IoErrorHandler = unsafe extern "C" fn(*mut std::ffi::c_void) -> libc::c_int;
     type SetIoErrorHandler = unsafe extern "C" fn(Option<IoErrorHandler>) -> Option<IoErrorHandler>;
+    type ExitHandler = unsafe extern "C" fn(*mut std::ffi::c_void, *mut std::ffi::c_void);
+    type SetExitHandler =
+        unsafe extern "C" fn(*mut std::ffi::c_void, Option<ExitHandler>, *mut std::ffi::c_void);
     // SAFETY: a NUL-terminated name; RTLD_NOLOAD only finds the library winit already loaded
     // (and keeps it loaded, which it is for the program's life anyway).
     let lib = unsafe {
@@ -258,11 +294,32 @@ pub fn on_display_lost(end: impl FnOnce() + 'static) {
         tracing::warn!("Xlib's end of the display isn't heard: Xlib isn't loaded");
         return;
     }
-    // SAFETY: the handle dlopen just gave; a NUL-terminated name.
-    let set = unsafe { libc::dlsym(lib, c"XSetIOErrorHandler".as_ptr()) };
+    // SAFETY: the handle dlopen just gave; NUL-terminated names.
+    let (set, set_exit) = unsafe {
+        (
+            libc::dlsym(lib, c"XSetIOErrorHandler".as_ptr()),
+            libc::dlsym(lib, c"XSetIOErrorExitHandler".as_ptr()),
+        )
+    };
     if set.is_null() {
         tracing::warn!("Xlib's end of the display isn't heard: no XSetIOErrorHandler");
         return;
+    }
+    // The display winit opened, for Xlib to return to it once its I/O error handler has.
+    let xlib_display = match display.display_handle().map(|h| h.as_raw()) {
+        Ok(raw_window_handle::RawDisplayHandle::Xlib(h)) => h.display,
+        _ => None,
+    };
+    if let Some(dpy) = xlib_display
+        && !set_exit.is_null()
+    {
+        // SAFETY: the symbol is Xlib's XSetIOErrorExitHandler, of this signature (Xlib.h).
+        let set_exit =
+            unsafe { std::mem::transmute::<*mut std::ffi::c_void, SetExitHandler>(set_exit) };
+        // SAFETY: winit's display, open for the program's life; the handler a function of the
+        // signature Xlib calls, for the program's life.
+        unsafe { set_exit(dpy.as_ptr(), Some(xlib_returns), std::ptr::null_mut()) };
+        XLIB_RETURNS.store(true, std::sync::atomic::Ordering::Release);
     }
     // SAFETY: the symbol is Xlib's XSetIOErrorHandler, of this signature (Xlib.h).
     let set = unsafe { std::mem::transmute::<*mut std::ffi::c_void, SetIoErrorHandler>(set) };
@@ -270,18 +327,30 @@ pub fn on_display_lost(end: impl FnOnce() + 'static) {
     unsafe { set(Some(xlib_lost_display)) };
 }
 
-/// Xlib's I/O error handler ([`on_display_lost`]): the X server's connection is lost. It must
-/// not return (Xlib would end the program).
+/// Xlib's I/O error handler ([`on_display_lost`]): the X server's connection is lost.
 #[cfg(target_os = "linux")]
 #[allow(unsafe_code)]
 unsafe extern "C" fn xlib_lost_display(_display: *mut std::ffi::c_void) -> libc::c_int {
     tracing::warn!("the display went away (Xlib: the X server's connection is lost)");
-    end_display_lost()
+    display_lost();
+    if !XLIB_RETURNS.load(std::sync::atomic::Ordering::Acquire) {
+        // An older Xlib ends the program once this returns: before it, as it is.
+        tracing::warn!("in the middle of a frame: nothing more is saved");
+        crate::crash::clean_exit();
+        mdm_crash::logs::flush(std::time::Duration::from_secs(1));
+        // SAFETY: ends the process, as Xlib's own handler would (with exit).
+        unsafe { libc::_exit(1) }
+    }
+    0
 }
+
+/// Xlib's exit handler ([`on_display_lost`]): returning lets the call that failed return.
+#[cfg(target_os = "linux")]
+extern "C" fn xlib_returns(_display: *mut std::ffi::c_void, _data: *mut std::ffi::c_void) {}
 
 /// Linux: whether a panic on `thread` is winit's on a lost display ([`on_display_lost`]): on the
 /// window's thread, with MDM's windows on X11 and its X server gone (a new connection to it is
-/// refused). Then it's the session's end, not a crash: [`end_display_lost`] instead of a report.
+/// refused). Then it's the session's end, not a crash: [`display_lost`] instead of a report.
 #[cfg(target_os = "linux")]
 pub fn display_lost_panic(thread: &str) -> bool {
     thread == "main"
@@ -289,27 +358,29 @@ pub fn display_lost_panic(thread: &str) -> bool {
         && x11rb::rust_connection::RustConnection::connect(None).is_err()
 }
 
-/// The display went away: the end ([`on_display_lost`]'s, on the window's thread, once), then MDM
-/// ends at once, without the libraries' exit handlers, which would only touch the lost display
-/// again. Elsewhere, or again: MDM ends as it is.
+/// The display went away. Between two frames: the end now ([`on_display_lost`]'s), and MDM ends
+/// at once, without the libraries' exit handlers, which would only touch the lost display again.
+/// In the middle of a frame (the app busy in it): the end is asked of the next frame, as a
+/// SIGTERM's is, and this returns; a panic of winit's then unwinds, which drops the app, and its
+/// drop saves as an Exit does.
 #[cfg(target_os = "linux")]
 #[allow(unsafe_code)]
-pub fn end_display_lost() -> ! {
-    tracing::warn!("the display went away: MDM saves and ends with it");
-    ask_end(SessionEnd::DisplayLost);
-    let end = DISPLAY_LOST.with(|d| d.try_borrow_mut().ok().and_then(|mut d| d.take()));
-    let code = match end {
-        Some(end) => match std::panic::catch_unwind(std::panic::AssertUnwindSafe(end)) {
-            Ok(()) => 0,
-            Err(_) => 1,
-        },
-        None => {
-            crate::crash::clean_exit();
-            1
-        }
-    };
-    // SAFETY: ends the process, as Xlib's own handler would (with exit).
-    unsafe { libc::_exit(code) }
+pub fn display_lost() {
+    let ended = DISPLAY_LOST.with(|d| {
+        d.try_borrow()
+            .ok()
+            .and_then(|d| d.as_ref().map(|end| end()))
+    });
+    if ended == Some(true) {
+        // SAFETY: ends the process, as Xlib's own handler would (with exit).
+        unsafe { libc::_exit(0) }
+    }
+    if ask_end(SessionEnd::DisplayLost) {
+        tracing::info!("the display went away during a frame: the next one saves and ends");
+        crate::crash::clean_exit();
+        let wake = WAKE.get().cloned();
+        wait_for_the_window(&|| wake.as_ref().map_or((), |w| w()), Some(END_GRACE));
+    }
 }
 
 pub fn run_at_startup() -> bool {
