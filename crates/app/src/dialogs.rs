@@ -709,7 +709,7 @@ impl AddUrl {
                 if addr.changed() {
                     self.error = None;
                 }
-                if ui.memory(|m| m.focused().is_none()) {
+                if winui::window_owns_focus(ui.ctx()) {
                     addr.request_focus();
                 }
                 // The arrow: the addresses entered before.

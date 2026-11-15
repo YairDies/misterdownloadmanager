@@ -200,6 +200,23 @@ pub fn menus(p: &egui::Painter) -> Vec<(&'static str, f32, f32, f32)> {
         .collect()
 }
 
+/// A menu-bar title's widget id (#1190): the node a reader is told about while the keyboard is
+/// on the bar.
+pub fn menubar_title_id(i: usize) -> egui::Id {
+    egui::Id::unique(("menubar", i))
+}
+
+/// The menu bar itself: the one Tab stop of the bar (#1190), whose active descendant is the title
+/// the keyboard is on.
+pub fn menubar_id() -> egui::Id {
+    egui::Id::unique("menubar-node")
+}
+
+/// The Categories pane: the widget that takes the keyboard focus (#1190).
+pub fn tree_pane_id() -> egui::Id {
+    egui::Id::unique("tree-blank")
+}
+
 /// Paint the menu bar; returns what happened to its titles this frame, for [`menubar_next`]: a
 /// title clicked (or opened and shut by a screen reader), or the pointer over one (which only
 /// moves to it from another open menu).
@@ -233,19 +250,77 @@ pub fn menu_bar(ui: &mut Ui, o: Pos2, width: f32, open: Option<usize>) -> Option
     let mut hit = None;
     // For screen readers and UI Automation (#113): a menu bar whose titles are menu items that
     // open their menus (Click, as with the mouse).
+    //
+    // The bar is the one Tab stop (#1190), and the title the keyboard is on is its active
+    // descendant: a reader says that title ("Ver Alt+V"), and the next Tab goes on to the
+    // toolbar instead of walking the titles one by one. Left and right are the bar's own, as the
+    // arrows are a list's, and the last title is the end of the row, as in Windows.
     let bar = ui.interact(
         winui::rect(Rect::from_min_size(o, vec2(width, MENU_H))),
-        egui::Id::unique("menubar-node"),
-        egui::Sense::hover(),
+        menubar_id(),
+        winui::focusable(),
     );
     winui::expose(&bar, egui::Role::MenuBar, "", true, None);
+    winui::keep_keys(ui, &bar, true, true, false);
+    let titles = menus(&p);
+    let hl_key = egui::Id::unique("menubar-highlighted");
+    let mut hl = ui
+        .ctx()
+        .data_mut(|d| d.get_temp::<usize>(hl_key).unwrap_or(0))
+        .min(titles.len().saturating_sub(1));
+    if let Some(i) = open {
+        hl = i;
+    }
+    // Only while no menu is open: an open menu's own keys are the menu's (Down lights its next
+    // item), so the bar must not eat them (#1190).
+    if bar.has_focus() && open.is_none() && !titles.is_empty() {
+        // Laid out in English, made where it is (the first title at the right in RTL): the next
+        // title is to the right, the previous one to the left.
+        let (on, back) = if winui::rtl() {
+            (egui::Key::ArrowLeft, egui::Key::ArrowRight)
+        } else {
+            (egui::Key::ArrowRight, egui::Key::ArrowLeft)
+        };
+        let (to_on, to_back, down) = ui.input_mut(|i| {
+            (
+                i.consume_key(egui::Modifiers::NONE, on),
+                i.consume_key(egui::Modifiers::NONE, back),
+                i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown),
+            )
+        });
+        hl = if to_on {
+            (hl + 1).min(titles.len() - 1)
+        } else if to_back {
+            hl.saturating_sub(1)
+        } else {
+            hl
+        };
+        if down {
+            hit = Some(MenuBarEvent::Open(hl));
+        }
+        if to_on || to_back || down {
+            // No pointer moves to show it, and the menu opens (or its item lights) on that frame.
+            ui.ctx().request_repaint();
+        }
+        ui.ctx().accesskit_node_builder(bar.id, |n| {
+            n.set_active_descendant(menubar_title_id(hl).accesskit_id())
+        });
+    }
+    ui.ctx().data_mut(|d| d.insert_temp(hl_key, hl));
     let titles_ui = ui.new_child(egui::UiBuilder::new().accessibility_parent(bar.id));
     let released = ui.input(|x| x.pointer.any_released());
-    for (i, (label, x, w, tx)) in menus(&p).iter().enumerate() {
+    for (i, (label, x, w, tx)) in titles.iter().enumerate() {
         // From the leading edge: the first menu at the right in RTL.
         let rc = winui::rect(Rect::from_min_size(o + vec2(*x, 0.0), vec2(*w, MENU_H)));
-        let resp = titles_ui.interact(rc, egui::Id::unique(("menubar", i)), winui::pointer_only());
-        winui::expose(&resp, egui::Role::MenuItem, &plain(label).0, true, None);
+        let (shown, letter) = plain(label);
+        // Its access key is said with its name ("Ver Alt+V"): the Windows adapter doesn't pass
+        // AccessKit's access key on to UI Automation, so a reader hears only the name (#1190).
+        let said = match letter.and_then(|at| shown.chars().nth(at)) {
+            Some(c) => format!("{shown} Alt+{}", c.to_uppercase().collect::<String>()),
+            None => shown.clone(),
+        };
+        let resp = titles_ui.interact(rc, menubar_title_id(i), winui::pointer_only());
+        winui::expose(&resp, egui::Role::MenuItem, &said, true, None);
         ui.ctx().accesskit_node_builder(resp.id, |n| {
             n.set_has_popup(egui::accesskit::HasPopup::Menu);
             n.set_expanded(open == Some(i));
@@ -258,7 +333,6 @@ pub fn menu_bar(ui: &mut Ui, o: Pos2, width: f32, open: Option<usize>) -> Option
         }
         // The title without its "&", its access letter underlined (each language marks its
         // own: French Tâches and Téléchargements both had T).
-        let (shown, letter) = plain(label);
         let drawn = text_font(&p, winui::segoe(), o.x + tx, o.y + 13.0, &shown, TEXT());
         // Dark mode always underlines mnemonics (1 px under the letter's advance); light mode
         // follows the Windows rule: once the keyboard is in use (`cues`).
@@ -539,10 +613,13 @@ fn mirror_for_screen_readers<C>(
                 MenuEntry::Sep => continue,
             };
             let (t, _) = plain(crate::i18n::tc("menu", label));
+            // Its shortcut is said with its name ("Agregar nueva descarga Ctrl+N"): a reader has
+            // no other way to hear it (#1190).
             let t = match e {
-                MenuEntry::Item(_, c, ..) | MenuEntry::Radio(_, c, ..) if hint(c).is_some() => {
-                    without_shortcut(&t).to_owned()
-                }
+                MenuEntry::Item(_, c, ..) | MenuEntry::Radio(_, c, ..) => match hint(c) {
+                    Some(keys) => format!("{} {}", without_shortcut(&t), keys),
+                    None => t,
+                },
                 _ => t,
             };
             let item = items.interact(
@@ -1492,10 +1569,10 @@ fn popup_level<C: Clone>(
                 MenuEntry::Item(_, c, ..) | MenuEntry::Radio(_, c, ..) => hint(c),
                 _ => None,
             };
-            let t = if keys.is_some() {
-                without_shortcut(&t).to_owned()
-            } else {
-                t
+            // Its shortcut is said with its name ("Agregar nueva descarga Ctrl+N") (#1190).
+            let t = match keys {
+                Some(keys) => format!("{} {}", without_shortcut(&t), keys),
+                None => t,
             };
             // The entry's node: a menu item (a check or radio item when it is one), its name,
             // whether it can be used, and for a submenu that it opens one.
@@ -1754,8 +1831,32 @@ pub fn toolbar(
             pos2(x, band.top()),
             vec2(total, band_h),
         ));
-        let resp = ui.interact(rc, egui::Id::unique(("tb", i)), winui::pointer_only());
+        let resp = ui.interact(rc, egui::Id::unique(("tb", i)), winui::focusable());
         let resp = if cut { resp.on_hover_text(full) } else { resp };
+        // The toolbar was invisible to screen readers: no role, no name, no focus (#1190). With
+        // a focusable sense egui's own rule clicks it for Enter and Space (context.rs).
+        winui::expose(&resp, egui::Role::Button, full, *enabled, None);
+        // Left and right walk the buttons (egui's own); up and down are the same move along the
+        // row, so they don't jump to another pane (#1190).
+        if resp.has_focus() {
+            winui::keep_keys(ui, &resp, false, true, false);
+            let (down, up) = ui.input_mut(|i| {
+                (
+                    i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown),
+                    i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp),
+                )
+            });
+            let (next, before) = if winui::rtl() {
+                (egui::FocusDirection::Left, egui::FocusDirection::Right)
+            } else {
+                (egui::FocusDirection::Right, egui::FocusDirection::Left)
+            };
+            if down {
+                ui.ctx().memory_mut(|m| m.move_focus(next));
+            } else if up {
+                ui.ctx().memory_mut(|m| m.move_focus(before));
+            }
+        }
         let past_button = |q: Pos2| winui::mx(q.x) >= x + bw;
         if *enabled && resp.hovered() {
             // Hover (IDM 6.42, captured 2026-10-30): the button's own width, from the band's top,
@@ -2067,11 +2168,9 @@ pub fn categories(
     let row_top = |k: usize| area.top() + 16.0 * (k as f32 - first_row);
     // Blank space (registered first, so the rows sit above it): the selected node's menu, at
     // the pointer (IDM places it beside the node; user decision: at the pointer).
-    let blank = ui.interact(
-        winui::rect(area),
-        egui::Id::unique("tree-blank"),
-        winui::pointer_only(),
-    );
+    // A real focus stop (#1190): a screen reader reaches the tree from the keyboard, and the
+    // tree's own arrows (its key filter, below) stay with it.
+    let blank = ui.interact(winui::rect(area), tree_pane_id(), winui::focusable());
     if blank.secondary_clicked()
         && let Some(k) = rows.iter().position(|r| r.selected)
         && let Some(at) = blank.interact_pointer_pos()
@@ -2087,6 +2186,10 @@ pub fn categories(
         true,
         None,
     );
+    winui::keep_keys(ui, &blank, true, true, false);
+    if blank.clicked() {
+        blank.request_focus();
+    }
     let rows_ui = ui.new_child(egui::UiBuilder::new().accessibility_parent(blank.id));
     // Where the selected row is, for its menu from the keyboard (Shift+F10, the Menu key).
     let mut selected_at: Option<(usize, Pos2)> = None;
@@ -2224,6 +2327,7 @@ pub fn categories(
                 None => crate::i18n::t(&r.label).to_owned(),
             };
             winui::expose(&resp, egui::Role::TreeItem, &name, true, None);
+            winui::expose_focus(&resp);
             let (expand, collapse, menu) = ui.input(|i| {
                 (
                     i.has_accesskit_action_request(resp.id, Action::Expand),
@@ -2279,6 +2383,14 @@ pub fn categories(
         {
             event = Some(TreeEvent::Context(k, at));
         }
+    }
+    // A reader follows the tree's chosen node, as it follows a list's row (#1190): the pane
+    // keeps egui's focus while the arrows move the choice, so what it says it is on is the
+    // choice. The node's own name carries its count ("Completadas (3)").
+    if let Some(k) = rows.iter().position(|r| r.selected) {
+        ui.ctx().accesskit_node_builder(blank.id, |n| {
+            n.set_active_descendant(egui::Id::unique(("tree-row", k)).accesskit_id())
+        });
     }
     // The selected node's menu from the keyboard, under the node: Shift+F10 or the Menu key.
     if keys

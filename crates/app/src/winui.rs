@@ -1297,7 +1297,10 @@ pub fn row_asked_for(
             .iter()
             .filter_map(|e| match e {
                 egui::Event::AccessKitActionRequest(r)
-                    if matches!(r.action, Action::ScrollIntoView | Action::Click) =>
+                    if matches!(
+                        r.action,
+                        Action::ScrollIntoView | Action::Click | Action::Focus
+                    ) =>
                 {
                     Some(r.target_node)
                 }
@@ -1506,6 +1509,7 @@ pub fn row_list(
         // Named by what its painter drew (#95: rows were read as blank items, and alike rows
         // couldn't be told apart by UI Automation).
         expose(&r, egui::Role::ListBoxOption, &look.name, true, None);
+        expose_focus(&r);
         // Selected as a list's item (UI Automation's SelectionItem), as the download list does;
         // expose's `on` would make it "toggled".
         // Its place among all the rows, not only those drawn (only the rows in view exist).
@@ -3944,7 +3948,7 @@ fn button_face(
     } else {
         resp
     };
-    if resp.has_focus() || (default_focus && ui.ctx().memory(|m| m.focused().is_none())) {
+    if resp.has_focus() || (default_focus && window_owns_focus(ui.ctx())) {
         focus_ring_round(ui.painter(), rc.shrink(2.0), (radius - 2.0).max(0.0));
     }
     if cut {
@@ -4185,6 +4189,22 @@ pub fn pointer_only() -> Sense {
 /// [`pointer_only`] that can also be dragged (a scroll bar's thumb).
 pub fn pointer_drag() -> Sense {
     Sense::CLICK | Sense::DRAG
+}
+
+/// A part that takes the keyboard focus, so a screen reader can reach it (#1190).
+///
+/// egui only offers a widget to Tab, and only answers a screen reader's Focus request, when its
+/// `Sense` is focusable: the parts built with [`pointer_only`] are named for UI Automation but
+/// stay outside egui's focus chain, so nothing can be reached from the keyboard. The main
+/// window's own body (the downloads list, the Categories tree) is built with these instead, and
+/// keeps the keys itself, as it always did.
+pub fn focusable() -> Sense {
+    Sense::click()
+}
+
+/// [`focusable`] that can also be dragged (the downloads list's own body).
+pub fn focusable_drag() -> Sense {
+    Sense::click_and_drag()
 }
 
 /// The ring of `resp`'s control around `rc` while it has the keyboard focus.
@@ -4889,6 +4909,16 @@ pub fn expose(resp: &Response, role: egui::Role, label: &str, enabled: bool, on:
     });
 }
 
+/// Lets a screen reader put the focus on a list's row: the rows stay out of egui's Tab order (the
+/// list's own body is the stop, #1190), so egui never adds AccessKit's `Focus` action for them
+/// (its `fill_accesskit_node_common` adds it only when `sense.is_focusable()`), and UI Automation
+/// reads "is keyboard focusable" from that action alone. The list honours the request by selecting
+/// that row and bringing it into view, so the reader's focus really moves there.
+pub fn expose_focus(resp: &Response) {
+    resp.ctx
+        .accesskit_node_builder(resp.id, |n| n.add_action(egui::accesskit::Action::Focus));
+}
+
 /// A drop-down list for screen readers and UI Automation, whose list (the shared popup) they
 /// can't reach: Set value picks the item of that text (as shown, or as written), Expand and
 /// Collapse open and close the list. Returns the item picked this frame.
@@ -5258,6 +5288,19 @@ pub fn keep_keys(ui: &Ui, resp: &Response, horizontal: bool, vertical: bool, esc
             )
         });
     }
+}
+
+/// Is the keyboard still on the main window's own body (the downloads list, the Categories
+/// tree), or on nothing at all?
+///
+/// Since #1190 the main window keeps a real focus stop, so "nothing is focused" no longer says
+/// whether a dialog's or a popup's own control should take the focus for itself, nor whether the
+/// window's own keys (Delete, for one) are the app's to act on.
+pub fn window_owns_focus(ctx: &egui::Context) -> bool {
+    ctx.memory(|m| {
+        m.focused()
+            .is_none_or(|id| id == crate::list::body_id() || id == crate::chrome::tree_pane_id())
+    })
 }
 
 /// Type-ahead, as Windows lists and drop-downs have it: letters typed while it has the keys

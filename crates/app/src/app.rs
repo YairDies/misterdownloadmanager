@@ -2020,6 +2020,10 @@ impl App {
             },
             icon: file_icon(&it.file_name),
             queued: queued.contains(&it.id),
+            // A progress bar only while the download is in flight (or partly done): a finished
+            // file is whole, and a bar at 100% on every row would add words to each of them
+            // (#1190).
+            progress: it.fraction().filter(|frac| *frac < 1.0),
             cells: [
                 it.file_name.clone(),
                 String::new(),
@@ -8640,60 +8644,130 @@ impl App {
         let typing = ctx
             .memory(|m| m.focused())
             .is_some_and(|id| egui::TextEdit::load_state(&ctx, id).is_some());
-        if self.open_menu.is_none() && self.popup.is_none() && !typing {
-            let labels: Vec<String> = chrome::menus(ui.painter())
-                .iter()
-                .map(|(l, ..)| chrome::menu_letter(l))
-                .collect();
-            let (alt_alone, f10, ctrl_f2, letter) = ctx.input(|i| {
-                let mut letter = None;
-                for e in &i.events {
-                    match e {
-                        egui::Event::Key {
-                            key,
-                            pressed: true,
-                            modifiers,
-                            ..
-                        } if !matches!(key, egui::Key::AltLeft | egui::Key::AltRight) => {
-                            if modifiers.alt && !modifiers.ctrl && !modifiers.command {
-                                letter = Some(key.name().to_lowercase());
-                            }
+        // Alt is read every frame, menu open or shut: it opens the bar, and shuts it again, as
+        // Windows' own menu bar does (SC_KEYMENU toggles).
+        let labels: Vec<String> = chrome::menus(ui.painter())
+            .iter()
+            .map(|(l, ..)| chrome::menu_letter(l))
+            .collect();
+        let (toggled, f10, ctrl_f2, letter) = ctx.input(|i| {
+            let mut letter = None;
+            for e in &i.events {
+                match e {
+                    egui::Event::Key {
+                        key,
+                        pressed: true,
+                        modifiers,
+                        ..
+                    } if !matches!(key, egui::Key::AltLeft | egui::Key::AltRight) => {
+                        if modifiers.alt && !modifiers.ctrl && !modifiers.command {
+                            letter = Some(key.name().to_lowercase());
                         }
-                        // A letter of another script (Cyrillic, Arabic...) typed with Alt.
-                        egui::Event::Text(t) if i.modifiers.alt && !i.modifiers.ctrl => {
-                            letter = Some(t.to_lowercase());
-                        }
-                        _ => {}
                     }
+                    // A letter of another script (Cyrillic, Arabic...) typed with Alt.
+                    egui::Event::Text(t) if i.modifiers.alt && !i.modifiers.ctrl => {
+                        letter = Some(t.to_lowercase());
+                    }
+                    _ => {}
                 }
-                (
-                    alt_alone_released(&i.events, &mut self.alt_down, &mut self.alt_alone),
-                    i.key_pressed(egui::Key::F10) && i.modifiers.is_none(),
-                    i.key_pressed(egui::Key::F2) && i.modifiers.ctrl,
-                    letter,
+            }
+            (
+                alt_alone_released(&i.events, &mut self.alt_down, &mut self.alt_alone),
+                i.key_pressed(egui::Key::F10) && i.modifiers.is_none(),
+                i.key_pressed(egui::Key::F2) && i.modifiers.ctrl,
+                letter,
+            )
+        });
+        // A focus change voids the reading: an Alt pressed before the window came forward — the
+        // one an Alt+Tab back is still holding — belongs to that switch, not to the bar. The
+        // window is told late as well: it draws no frame while it is away, so a whole round
+        // trip's events arrive together, once the key is already up, which is why neither the
+        // modifier state nor the key's own state says anything useful by then (#1190).
+        let epoch_key = egui::Id::unique("focus-epoch");
+        let press_epoch_key = egui::Id::unique("alt-press-epoch");
+        let focus_changes = ctx.input(|i| {
+            i.events
+                .iter()
+                .filter(|e| matches!(e, egui::Event::WindowFocused(_)))
+                .count() as u64
+        });
+        let epoch = ctx.data_mut(|d| d.get_temp::<u64>(epoch_key).unwrap_or(0)) + focus_changes;
+        ctx.data_mut(|d| d.insert_temp(epoch_key, epoch));
+        let pressed_alt = ctx.input(|i| {
+            i.events.iter().any(|e| {
+                matches!(
+                    e,
+                    egui::Event::Key {
+                        key: egui::Key::AltLeft | egui::Key::AltRight,
+                        pressed: true,
+                        ..
+                    }
                 )
-            });
+            })
+        });
+        if pressed_alt {
+            ctx.data_mut(|d| d.insert_temp(press_epoch_key, epoch));
+        }
+        let stale =
+            ctx.data_mut(|d| d.get_temp::<u64>(press_epoch_key).unwrap_or(u64::MAX)) != epoch;
+        // A second signal, for a platform whose focus events never arrive: the window coming
+        // forward with Alt still held, asked of the system at that moment.
+        let came_forward_with_alt = ctx.input(|i| {
+            i.events
+                .iter()
+                .any(|e| matches!(e, egui::Event::WindowFocused(true)))
+        }) && alt_held_now().unwrap_or(false);
+        let alt_alone = toggled && !stale && !came_forward_with_alt;
+        if self.open_menu.is_some() {
+            // Alt again shuts the menu it opened, as in Windows.
+            if alt_alone {
+                self.open_menu = None;
+                self.alt_alone = false;
+                ctx.memory_mut(|m| m.request_focus(crate::list::body_id()));
+            }
+        } else if self.popup.is_none() && !typing {
+            if self.alt_down {
+                // The keyboard is in use: access letters show (light mode too).
+                crate::chrome::show_cues(&ctx);
+            }
             let mut open = None;
+            let mut by_letter = None;
             if cfg!(target_os = "macos") {
                 if ctrl_f2 {
                     open = Some(0);
                 }
             } else {
-                if self.alt_down {
-                    // The keyboard is in use: access letters show (light mode too).
-                    crate::chrome::show_cues(&ctx);
-                }
                 if alt_alone || f10 {
                     open = Some(0);
                 }
                 if let Some(l) = letter {
-                    open = labels.iter().position(|m| *m == l).or(open);
+                    by_letter = labels.iter().position(|m| *m == l);
+                    open = by_letter.or(open);
                 }
             }
             if let Some(i) = open {
                 self.alt_alone = false;
                 self.open_menu = chrome::menubar_next(self.open_menu, MenuBarEvent::Open(i));
                 chrome::start_keyboard(&ctx, &format!("menu-{i}"));
+                // The bar takes the focus: it is the bar's active descendant that names the menu
+                // that opened ("Archivo Alt+A"), and the mirror (#328) then moves that same
+                // descendant to the lit item, so a reader hears the item too (#1190).
+                ctx.memory_mut(|m| m.request_focus(chrome::menubar_id()));
+                if by_letter.is_some() {
+                    // The letter that opened the menu is the menu's own: it must not also pick an
+                    // item of that menu. Alt+T opened Tareas and ran "Abrir archivo torrent..."
+                    // (the item with that letter), and Alt+A opened Archivo and ran Delete's
+                    // (#1190).
+                    ctx.input_mut(|i| {
+                        i.events.retain(|e| {
+                            !matches!(
+                                e,
+                                egui::Event::Key { pressed: true, modifiers, .. }
+                                    if modifiers.alt && !modifiers.ctrl && !modifiers.command
+                            )
+                        })
+                    });
+                }
             }
         } else {
             self.alt_down = false;
@@ -8701,8 +8775,17 @@ impl App {
         }
 
         // Menu bar and its popups: which menu is open is chrome::menubar_next's to say.
+        let menu_before = self.open_menu;
         if let Some(event) = chrome::menu_bar(ui, o, w, self.open_menu) {
             self.open_menu = chrome::menubar_next(self.open_menu, event);
+            // Opened with the bar's own ArrowDown: its first item lights up, as Alt's does, and
+            // the bar keeps the focus so the mirror says that item (#1190).
+            if menu_before.is_none()
+                && let Some(i) = self.open_menu
+            {
+                chrome::start_keyboard(&ctx, &format!("menu-{i}"));
+                ctx.memory_mut(|m| m.request_focus(chrome::menubar_id()));
+            }
         }
         // A menu opened by Left or Right is drawn in the same pass as the one it replaces (a
         // second turn): on X11 the bar's menus share one window (chrome::popup), and a pass
@@ -8750,6 +8833,19 @@ impl App {
                 break;
             }
         }
+        // A menu shut (Escape, a choice made): the keys go back to the download list, where they
+        // were before it opened. The keyboard had taken them for the bar, so a screen reader said
+        // which menu it was (#1190); leaving them there would leave the window's arrows and
+        // Delete dead until the reader pressed Tab.
+        let was_key = egui::Id::unique("menu-was-open");
+        let was = ctx.data_mut(|d| d.get_temp::<bool>(was_key).unwrap_or(false));
+        if was && self.open_menu.is_none() {
+            let now = ctx.memory(|m| m.focused());
+            if now.is_none() || now == Some(chrome::menubar_id()) {
+                ctx.memory_mut(|m| m.request_focus(crate::list::body_id()));
+            }
+        }
+        ctx.data_mut(|d| d.insert_temp(was_key, self.open_menu.is_some()));
 
         // Toolbar — full labels (IDM truncates "Delete Co...", "Start Qu...": user decision).
         let picked = self.chosen(None);
@@ -8837,18 +8933,27 @@ impl App {
             }
             // The tree's keys while it has them (Tab moves between it and the list): Up / Down
             // through the nodes, Left / Right close and open a branch, Home / End.
-            let free = self.popup.is_none()
-                && self.open_menu.is_none()
-                && ctx.memory(|m| m.focused().is_none());
+            //
+            // Who has them is egui's own focus now (#1190), not a flag of MDM's: a screen reader
+            // follows the focus, so the focus has to be the real one. The tree's pane and the
+            // list's own body are both focus stops, and the Tab between them is egui's.
+            let free = self.popup.is_none() && self.open_menu.is_none();
+            self.tree_keys = free && ctx.memory(|m| m.has_focus(crate::chrome::tree_pane_id()));
+            self.list
+                .set_keys(free && ctx.memory(|m| m.has_focus(crate::list::body_id())));
+            // The downloads list is the keyboard's home (#1190): it takes the keys when nothing
+            // has them — the window's first frame, a press on the background, a menu just shut —
+            // so a reader starts on the list, as Explorer's does. A frame carrying a key is left
+            // alone, so Tab can walk out of the list and round again.
             if free
-                && ctx.input_mut(|i| {
-                    i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)
-                        || i.consume_key(egui::Modifiers::SHIFT, egui::Key::Tab)
+                && !ctx.input(|i| {
+                    i.events
+                        .iter()
+                        .any(|e| matches!(e, egui::Event::Key { .. }))
                 })
+                && ctx.memory(|m| m.focused().is_none())
             {
-                self.tree_keys = !self.tree_keys;
-                self.list.set_keys(!self.tree_keys);
-                crate::chrome::show_cues(&ctx);
+                ctx.memory_mut(|m| m.request_focus(crate::list::body_id()));
             }
             let mut tree_event = None;
             if free && self.tree_keys {
@@ -9057,7 +9162,7 @@ impl App {
         if chosen.is_none()
             && self.popup.is_none()
             && self.open_menu.is_none()
-            && ctx.memory(|m| m.focused().is_none())
+            && winui::window_owns_focus(&ctx)
         {
             // On Windows egui reports Shift+Delete as Cut (Ctrl+X is Cut too, without Shift).
             let (del, shift_del) = ctx.input(|i| {
@@ -11111,38 +11216,76 @@ fn finished_windows(
     close
 }
 
+/// Whether Alt is held right now, asked of the operating system, or `None` where there is no
+/// such query.
+///
+/// A window that comes forward is told what it comes with through the windower's modifier events,
+/// and those lag: measured on Windows, the focus event arrives with Alt still reported up, and the
+/// Alt that is held is handed over a frame or two later as a press. The system knows now, so the
+/// release that belongs to a window switch is not taken for the menu bar's key (#1190).
+#[cfg(windows)]
+fn alt_held_now() -> Option<bool> {
+    Some(crate::win32::alt_held())
+}
+
+/// No such query here: the grace after coming forward stands in for it.
+#[cfg(not(windows))]
+fn alt_held_now() -> Option<bool> {
+    None
+}
+
 /// Whether Alt was pressed and let go alone in `events` (one pass's, in their order): the menu
 /// bar's key, as in Windows. `down` and `alone` carry the state from pass to pass. Read from the
 /// events, not from the pass's modifiers: a screen reader (NVDA, Narrator) holds a key back and
 /// passes it on with its release, so Alt's press and release came in one pass, where Alt never
 /// showed as held, and Alt never opened the menu while one ran (#328). The Alt key's own key
 /// event (egui names AltLeft and AltRight too) isn't another key.
+///
+/// The window's own focus is part of it: losing or regaining it starts the reading over, so an
+/// Alt held across a switch to another window and back doesn't open the first menu.
 fn alt_alone_released(events: &[egui::Event], down: &mut bool, alone: &mut bool) -> bool {
     let mut released = false;
     for e in events {
         match e {
-            egui::Event::ModifiersChanged(m) => {
-                if m.alt && !*down {
-                    *down = true;
-                    *alone = !(m.ctrl || m.shift || m.command || m.mac_cmd);
-                } else if m.alt {
-                    // Ctrl or Shift added while Alt is held: not Alt alone.
-                    *alone &= !(m.ctrl || m.shift || m.command || m.mac_cmd);
+            // The Alt key is what begins the reading, not the modifier state: a window coming
+            // forward again while Alt is still held (Alt+Tab away and back, where Windows keeps
+            // the Tab for itself) is told the modifier is down without ever seeing the key, and
+            // took it for Alt let go alone — the first menu opened every time (#1190).
+            egui::Event::Key {
+                key: egui::Key::AltLeft | egui::Key::AltRight,
+                pressed,
+                ..
+            } => {
+                if *pressed {
+                    if !*down {
+                        *down = true;
+                        *alone = true;
+                    }
                 } else if *down {
                     released |= *alone;
                     *down = false;
                     *alone = false;
                 }
             }
-            egui::Event::Key {
-                key: egui::Key::AltLeft | egui::Key::AltRight,
-                ..
-            } => {}
+            egui::Event::ModifiersChanged(m) => {
+                if m.alt {
+                    // Ctrl or Shift added while Alt is held: not Alt alone. (The press itself is
+                    // the key's, above.)
+                    *alone &= !(m.ctrl || m.shift || m.command || m.mac_cmd);
+                } else if *down {
+                    // The release the keyboard didn't hand us (a screen reader holds a key back
+                    // and passes it on with its release).
+                    released |= *alone;
+                    *down = false;
+                    *alone = false;
+                }
+            }
             egui::Event::Key { pressed: true, .. }
             | egui::Event::PointerButton { pressed: true, .. } => {
                 *alone = false;
             }
-            egui::Event::WindowFocused(false) => {
+            // Losing or regaining the window's focus starts the reading over.
+            egui::Event::WindowFocused(_) => {
                 *down = false;
                 *alone = false;
             }

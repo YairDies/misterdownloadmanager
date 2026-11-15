@@ -41,6 +41,21 @@ unsafe fn SetWindowLongPtrW(
     }
 }
 
+/// Whether the Alt key is held right now: the system's own state at this instant, not what the
+/// window was last told about it.
+///
+/// A window that comes forward is handed what it comes with through the windower's modifier
+/// events, and those lag behind: measured on Windows, the focus event arrives with Alt still
+/// reported up, and the Alt that is held is handed over a frame or two later as a press. Asking
+/// the system at that very moment tells the two apart, so the release that belongs to a window
+/// switch is not taken for the menu bar's key (#1190).
+pub fn alt_held() -> bool {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_MENU};
+    // SAFETY: reading one key's state; no pointers, no allocation, no callbacks.
+    let state = unsafe { GetAsyncKeyState(VK_MENU as i32) };
+    (state as u16) & 0x8000 != 0
+}
+
 struct Find {
     pid: u32,
     title: Vec<u16>,

@@ -394,6 +394,14 @@ pub struct Row {
     /// The Status cell's whole text when the cell shows it short ("Checking 45%" for
     /// "Verifying... (45%)", #736): the cell's tip starts with it, and a screen reader says it.
     pub status_whole: Option<String>,
+    /// How far the download is, 0..=1, when the model knows (a file with a known size): a screen
+    /// reader gets it as the row's own progress bar (#1190).
+    pub progress: Option<f64>,
+}
+
+/// The downloads list's own body: the widget that takes the keyboard focus (#1190).
+pub fn body_id() -> egui::Id {
+    egui::Id::unique("download-list")
 }
 
 #[derive(Default)]
@@ -435,7 +443,14 @@ fn keyboard(
     out: &mut ListResponse,
 ) -> bool {
     let n = rows.len();
-    if n == 0 || st.menu_open || ui.ctx().memory(|m| m.focused().is_some()) {
+    // The list's own body is what holds the keys (#1190); anything else focused — a dialog's
+    // control, a text box — keeps its own keys.
+    if n == 0
+        || st.menu_open
+        || ui
+            .ctx()
+            .memory(|m| m.focused().is_some_and(|id| id != body_id()))
+    {
         return false;
     }
     if ui.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::A)) {
@@ -567,13 +582,8 @@ pub fn show(
     // the column or row under it.
     let screen = winui::rect;
     let english = |q: Pos2| pos2(winui::mx(q.x), q.y);
-    // Focus follows the last press: inside the list focuses it, anywhere else unfocuses it.
-    if ui.input(|i| i.pointer.any_pressed()) {
-        st.focused = ui
-            .ctx()
-            .pointer_interact_pos()
-            .is_some_and(|p| screen(outer).contains(p));
-    }
+    // Focus follows the last press, as it did; from here on it is egui's own focus (#1190),
+    // taken by the list's body below and asked of egui by the app.
     let p = ui.painter_at(screen(outer));
     let (l, t, r, b) = (
         outer.left(),
@@ -845,11 +855,7 @@ pub fn show(
     let body_top = ct + header_h();
     let body = Rect::from_min_max(pos2(cl, body_top), pos2(rr + 1.0, rb + 1.0));
     out.body = Some(body);
-    let resp = ui.interact(
-        screen(body),
-        egui::Id::unique("download-list"),
-        winui::pointer_drag(),
-    );
+    let resp = ui.interact(screen(body), body_id(), winui::focusable_drag());
     // For screen readers: the list, its rows below, and the row with the dotted outline
     // as the one they read (the list keeps its keys itself, not egui's focus).
     winui::expose(
@@ -859,6 +865,14 @@ pub fn show(
         true,
         None,
     );
+    // Its own arrows (and Escape) stay with it: egui otherwise moves the focus on an arrow.
+    winui::keep_keys(ui, &resp, true, true, false);
+    // A press inside takes the keys, as it always did; from here on it is egui's own focus the
+    // rest of the app asks about (#1190), so the row a reader is on is the row on screen.
+    if resp.clicked() || resp.drag_started() {
+        resp.request_focus();
+    }
+    st.focused = resp.has_focus();
     if let Some(f) = focus {
         let row = egui::Id::unique(("download-row", f));
         ui.ctx()
@@ -938,6 +952,7 @@ pub fn show(
             n.set_position_in_set(idx);
             n.set_size_of_set(rows.len());
             n.add_action(egui::accesskit::Action::ScrollIntoView);
+            n.add_action(egui::accesskit::Action::Focus);
             n.set_bounds(egui::accesskit::Rect {
                 x0: (bounds.left() * ppp) as f64,
                 y0: (bounds.top() * ppp) as f64,
@@ -967,6 +982,24 @@ pub fn show(
         if let Some(row) = rows.get(idx) {
             let picked = selected.get(idx).copied().unwrap_or(false);
             expose_row(idx, row, picked);
+            // The download's progress as a progress bar of its own (#1190): UI Automation reads
+            // it through the RangeValue pattern, so a reader's own progress reporting — its
+            // beeps and percentages — follows it while nobody has to move the focus. It has no
+            // name on purpose: a name would be read in place of the value.
+            if let Some(frac) = row.progress {
+                let bar = row_id(idx).with("progress");
+                let bar_rc = screen(Rect::from_min_size(
+                    pos2(cl, top),
+                    egui::vec2(rr - cl, row_h()),
+                ));
+                rows_ui.interact(bar_rc, bar, egui::Sense::hover());
+                ui.ctx().accesskit_node_builder(bar, |n| {
+                    n.set_role(egui::Role::ProgressIndicator);
+                    n.set_min_numeric_value(0.0);
+                    n.set_max_numeric_value(100.0);
+                    n.set_numeric_value(frac.clamp(0.0, 1.0) * 100.0);
+                });
+            }
             let sel = picked && st.focused;
             // The focused row's dotted outline only once the keyboard is in use, as every
             // control's focus (winui::keyboard_in_use).
@@ -1540,7 +1573,7 @@ fn filter_box(ui: &mut Ui, st: &mut ListState) {
                         true,
                         false,
                     );
-                    if !edit.has_focus() && !ui.ctx().memory(|m| m.focused().is_some()) {
+                    if !edit.has_focus() && winui::window_owns_focus(ui.ctx()) {
                         edit.request_focus();
                     }
                     st.filters[col] = (!t.is_empty()).then_some(Filter::Text(t));
@@ -1730,6 +1763,7 @@ mod tests {
             queued,
             cells,
             status_whole: None,
+            progress: None,
         }
     }
 
