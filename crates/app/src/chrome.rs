@@ -245,7 +245,15 @@ pub fn menu_bar(ui: &mut Ui, o: Pos2, width: f32, open: Option<usize>) -> Option
         // From the leading edge: the first menu at the right in RTL.
         let rc = winui::rect(Rect::from_min_size(o + vec2(*x, 0.0), vec2(*w, MENU_H)));
         let resp = titles_ui.interact(rc, egui::Id::unique(("menubar", i)), winui::pointer_only());
-        winui::expose(&resp, egui::Role::MenuItem, &plain(label).0, true, None);
+        // Its name carries the key that opens it ("Ver Alt+V", each language's own letter): the
+        // Windows adapter does not pass AccessKit's access key on to UI Automation, so a reader
+        // hears only what the name holds (#1190).
+        let (shown_name, letter_at) = plain(label);
+        let said = match letter_at.and_then(|at| shown_name.chars().nth(at)) {
+            Some(c) => format!("{shown_name} Alt+{}", c.to_uppercase().collect::<String>()),
+            None => shown_name.clone(),
+        };
+        winui::expose(&resp, egui::Role::MenuItem, &said, true, None);
         ui.ctx().accesskit_node_builder(resp.id, |n| {
             n.set_has_popup(egui::accesskit::HasPopup::Menu);
             n.set_expanded(open == Some(i));
@@ -539,10 +547,13 @@ fn mirror_for_screen_readers<C>(
                 MenuEntry::Sep => continue,
             };
             let (t, _) = plain(crate::i18n::tc("menu", label));
+            // Its shortcut is said with its name ("Add new download Ctrl+N"): the menu draws it
+            // in its own column, where a reader cannot reach it (#1190).
             let t = match e {
-                MenuEntry::Item(_, c, ..) | MenuEntry::Radio(_, c, ..) if hint(c).is_some() => {
-                    without_shortcut(&t).to_owned()
-                }
+                MenuEntry::Item(_, c, ..) | MenuEntry::Radio(_, c, ..) => match hint(c) {
+                    Some(keys) => format!("{} {}", without_shortcut(&t), keys),
+                    None => t,
+                },
                 _ => t,
             };
             let item = items.interact(
@@ -1657,10 +1668,10 @@ fn popup_level<C: Clone>(
                 MenuEntry::Item(_, c, ..) | MenuEntry::Radio(_, c, ..) => hint(c),
                 _ => None,
             };
-            let t = if keys.is_some() {
-                without_shortcut(&t).to_owned()
-            } else {
-                t
+            // Its shortcut is said with its name ("Add new download Ctrl+N") (#1190).
+            let t = match keys {
+                Some(keys) => format!("{} {}", without_shortcut(&t), keys),
+                None => t,
             };
             // The entry's node: a menu item (a check or radio item when it is one), its name,
             // whether it can be used, and for a submenu that it opens one.

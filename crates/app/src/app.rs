@@ -2255,6 +2255,9 @@ impl App {
             },
             icon: file_icon(&it.file_name),
             queued: queued.contains(&it.id),
+            // A progress bar only while the download is in flight: a finished file is whole, and
+            // a bar at 100% on every row would only add words to it (#1190).
+            progress: it.fraction().filter(|frac| *frac < 1.0),
             cells: [
                 it.file_name.clone(),
                 String::new(),
@@ -9345,39 +9348,80 @@ impl App {
         let typing = ctx
             .memory(|m| m.focused())
             .is_some_and(|id| egui::TextEdit::load_state(&ctx, id).is_some());
-        if self.open_menu.is_none() && self.popup.is_none() && !typing {
-            let labels: Vec<String> = chrome::menus(ui.painter())
-                .iter()
-                .map(|(l, ..)| chrome::menu_letter(l))
-                .collect();
-            let (alt_alone, f10, ctrl_f2, letter) = ctx.input(|i| {
-                let mut letter = None;
-                for e in &i.events {
-                    match e {
-                        egui::Event::Key {
-                            key,
-                            pressed: true,
-                            modifiers,
-                            ..
-                        } if !matches!(key, egui::Key::AltLeft | egui::Key::AltRight) => {
-                            if modifiers.alt && !modifiers.ctrl && !modifiers.command {
-                                letter = Some(key.name().to_lowercase());
-                            }
+        // Alt is read every frame, menu open or shut: it opens the bar, and shuts it again, as
+        // Windows does (SC_KEYMENU toggles).
+        let labels: Vec<String> = chrome::menus(ui.painter())
+            .iter()
+            .map(|(l, ..)| chrome::menu_letter(l))
+            .collect();
+        let (toggled, f10, ctrl_f2, letter) = ctx.input(|i| {
+            let mut letter = None;
+            for e in &i.events {
+                match e {
+                    egui::Event::Key {
+                        key,
+                        pressed: true,
+                        modifiers,
+                        ..
+                    } if !matches!(key, egui::Key::AltLeft | egui::Key::AltRight) => {
+                        if modifiers.alt && !modifiers.ctrl && !modifiers.command {
+                            letter = Some(key.name().to_lowercase());
                         }
-                        // A letter of another script (Cyrillic, Arabic...) typed with Alt.
-                        egui::Event::Text(t) if i.modifiers.alt && !i.modifiers.ctrl => {
-                            letter = Some(t.to_lowercase());
-                        }
-                        _ => {}
                     }
+                    // A letter of another script (Cyrillic, Arabic...) typed with Alt.
+                    egui::Event::Text(t) if i.modifiers.alt && !i.modifiers.ctrl => {
+                        letter = Some(t.to_lowercase());
+                    }
+                    _ => {}
                 }
-                (
-                    alt_alone_released(&i.events, &mut self.alt_down, &mut self.alt_alone),
-                    i.key_pressed(egui::Key::F10) && i.modifiers.is_none(),
-                    i.key_pressed(egui::Key::F2) && i.modifiers.ctrl,
-                    letter,
+            }
+            (
+                alt_alone_released(&i.events, &mut self.alt_down, &mut self.alt_alone),
+                i.key_pressed(egui::Key::F10) && i.modifiers.is_none(),
+                i.key_pressed(egui::Key::F2) && i.modifiers.ctrl,
+                letter,
+            )
+        });
+        // A focus change voids the reading: the Alt an Alt+Tab back is still holding belongs to
+        // that switch, not to the bar. It has to be counted, not timed: the window draws no frame
+        // while it is away, so a whole round trip's events arrive together, once the key is up,
+        // and neither the modifier state nor the system's own key state says anything useful by
+        // then (#1190).
+        let epoch_key = egui::Id::unique("focus-epoch");
+        let press_epoch_key = egui::Id::unique("alt-press-epoch");
+        let focus_changes = ctx.input(|i| {
+            i.events
+                .iter()
+                .filter(|e| matches!(e, egui::Event::WindowFocused(_)))
+                .count() as u64
+        });
+        let epoch = ctx.data_mut(|d| d.get_temp::<u64>(epoch_key).unwrap_or(0)) + focus_changes;
+        ctx.data_mut(|d| d.insert_temp(epoch_key, epoch));
+        let pressed_alt = ctx.input(|i| {
+            i.events.iter().any(|e| {
+                matches!(
+                    e,
+                    egui::Event::Key {
+                        key: egui::Key::AltLeft | egui::Key::AltRight,
+                        pressed: true,
+                        ..
+                    }
                 )
-            });
+            })
+        });
+        if pressed_alt {
+            ctx.data_mut(|d| d.insert_temp(press_epoch_key, epoch));
+        }
+        let stale =
+            ctx.data_mut(|d| d.get_temp::<u64>(press_epoch_key).unwrap_or(u64::MAX)) != epoch;
+        let alt_alone = toggled && !stale;
+        if self.open_menu.is_some() {
+            // Alt again shuts the menu it opened, as in Windows; the pane keeps its keys.
+            if alt_alone {
+                self.open_menu = None;
+                self.alt_alone = false;
+            }
+        } else if self.popup.is_none() && !typing {
             let mut open = None;
             if cfg!(target_os = "macos") {
                 if ctrl_f2 {
@@ -9391,14 +9435,28 @@ impl App {
                 if alt_alone || f10 {
                     open = Some(0);
                 }
-                if let Some(l) = letter {
-                    open = labels.iter().position(|m| *m == l).or(open);
+                if let Some(l) = &letter {
+                    open = labels.iter().position(|m| m == l).or(open);
                 }
             }
             if let Some(i) = open {
                 self.alt_alone = false;
                 self.open_menu = chrome::menubar_next(self.open_menu, MenuBarEvent::Open(i));
                 chrome::start_keyboard(&ctx, &format!("menu-{i}"));
+                // The letter that opened the menu is the menu's own: it must not also pick an
+                // item of it (Alt+T opened Tareas and ran "Abrir archivo torrent...", Alt+A
+                // opened Archivo and ran Delete's) (#1190).
+                if letter.is_some() {
+                    ctx.input_mut(|i| {
+                        i.events.retain(|e| {
+                            !matches!(
+                                e,
+                                egui::Event::Key { pressed: true, modifiers, .. }
+                                    if modifiers.alt && !modifiers.ctrl && !modifiers.command
+                            )
+                        })
+                    });
+                }
             }
         } else {
             self.alt_down = false;
