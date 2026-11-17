@@ -239,15 +239,17 @@ pub fn menu_bar(ui: &mut Ui, o: Pos2, width: f32, open: Option<usize>) -> Option
         egui::Sense::hover(),
     );
     winui::expose(&bar, egui::Role::MenuBar, "", true, None);
+    // A screen reader can move its focus to the bar (and to the title the keys are on, below):
+    // the caller then gives the bar the keys, and Tab goes on from it (#1190).
+    if winui::focus_target(ui.ctx(), bar.id) {
+        hit = Some(MenuBarEvent::Keys);
+    }
     let titles_ui = ui.new_child(egui::UiBuilder::new().accessibility_parent(bar.id));
     let released = ui.input(|x| x.pointer.any_released());
     for (i, (label, x, w, tx)) in menus(&p).iter().enumerate() {
         // From the leading edge: the first menu at the right in RTL.
         let rc = winui::rect(Rect::from_min_size(o + vec2(*x, 0.0), vec2(*w, MENU_H)));
-        // A Tab stop of egui's own chain: the menu bar is where Tab from the list goes (and
-        // Shift+Tab from the toolbar), so a reader can reach the menus at all. Enter or Space
-        // opens the title's menu, as its click does (#1190).
-        let resp = titles_ui.interact(rc, egui::Id::unique(("menubar", i)), egui::Sense::click());
+        let resp = titles_ui.interact(rc, menubar_title_id(i), winui::pointer_only());
         // Its name carries the key that opens it ("Ver Alt+V", each language's own letter): the
         // Windows adapter does not pass AccessKit's access key on to UI Automation, so a reader
         // hears only what the name holds (#1190).
@@ -303,6 +305,12 @@ pub fn menu_bar(ui: &mut Ui, o: Pos2, width: f32, open: Option<usize>) -> Option
 
 /// The menu-bar title under `pos` (main-window coordinates), as [`menu_bar`] lays them out at
 /// `o`: the first menu at the right in RTL.
+/// A menu-bar title's widget id (#1190): the Tab stop of its own, and what the app focuses when
+/// the bar takes the keys.
+pub fn menubar_title_id(i: usize) -> egui::Id {
+    egui::Id::unique(("menubar", i))
+}
+
 pub fn menubar_title_at(p: &egui::Painter, o: Pos2, pos: Pos2) -> Option<usize> {
     menus(p).iter().position(|(_, x, w, _)| {
         winui::rect(Rect::from_min_size(o + vec2(*x, 0.0), vec2(*w, MENU_H))).contains(pos)
@@ -325,6 +333,8 @@ pub enum MenuBarEvent {
     Chosen,
     /// Left or Right, or the keyboard (Alt, F10, an access letter), opened menu `i`.
     Open(usize),
+    /// A screen reader moved its focus to the bar: it takes the keys (Tab goes on from it).
+    Keys,
 }
 
 /// The menu bar's open menu after `event` (`open`: the one open before it).
@@ -356,6 +366,8 @@ pub fn menubar_next(open: Option<usize>, event: MenuBarEvent) -> Option<usize> {
         }
         | MenuBarEvent::Chosen => None,
         MenuBarEvent::Open(i) => Some(i),
+        // The bar took the keys: no menu of it opens or shuts by that alone.
+        MenuBarEvent::Keys => open,
     }
 }
 

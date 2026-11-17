@@ -1011,15 +1011,18 @@ enum Pane {
     Toolbar,
     Tree,
     List,
+    /// The menu bar (#1190): Tab from the list reaches it, and Tab again goes on to the toolbar
+    /// (Shift+Tab back to the list), so a reader can walk the window's parts.
+    Bar,
 }
 
 /// Where Tab (Shift+Tab: `back`) takes the keys from `from` (`None`: nothing had them, after a
 /// click on the toolbar or the strip), round; the tree left out while it is hidden.
 fn tab_to(from: Option<Pane>, tree_shown: bool, back: bool) -> Pane {
     let order: &[Pane] = if tree_shown {
-        &[Pane::Toolbar, Pane::Tree, Pane::List]
+        &[Pane::Toolbar, Pane::Tree, Pane::List, Pane::Bar]
     } else {
-        &[Pane::Toolbar, Pane::List]
+        &[Pane::Toolbar, Pane::List, Pane::Bar]
     };
     let n = order.len();
     let at = from.and_then(|p| order.iter().position(|q| *q == p));
@@ -1060,6 +1063,11 @@ pub struct App {
     /// The toolbar has the keys (Tab reaches it, #1190), at button `toolbar_at` (kept when Tab
     /// leaves it, as Windows' toolbars keep theirs).
     toolbar_keys: bool,
+    /// The menu bar has the keys (#1190): the title the keys are on, and the reader is told it
+    /// is what has the focus. Left and Right walk the titles, Down opens the one the keys are on.
+    bar_keys: bool,
+    /// The menu-bar title the keys are on (index into the bar's menus).
+    menubar_at: usize,
     toolbar_at: usize,
     /// The app's context, to reach its windows from anywhere (bring one to the front).
     ui_ctx: egui::Context,
@@ -1851,6 +1859,8 @@ impl App {
             ui_ctx: ctx.clone(),
             tree_keys: false,
             toolbar_keys: false,
+            bar_keys: false,
+            menubar_at: 0,
             toolbar_at: 0,
             move_rename_for: None,
             move_many_for: Vec::new(),
@@ -9224,6 +9234,7 @@ impl App {
     fn give_keys(&mut self, pane: Pane) {
         self.toolbar_keys = pane == Pane::Toolbar;
         self.tree_keys = pane == Pane::Tree;
+        self.bar_keys = pane == Pane::Bar;
         self.list.set_keys(pane == Pane::List);
     }
 
@@ -9464,8 +9475,48 @@ impl App {
             self.alt_alone = false;
         }
 
+        // The menu bar's own keys while it has them (#1190): Left and Right walk its titles
+        // (egui's focus is not in the bar: its parts keep their keys themselves, as the toolbar
+        // and the list do), Down opens the title the keys are on, as Windows' bars do. Nothing
+        // else is focused to take them (the same `free` the pane cycle reads, below).
+        if self.bar_keys
+            && self.popup.is_none()
+            && self.open_menu.is_none()
+            && ctx.memory(|m| m.focused().is_none())
+        {
+            let titles = chrome::menus(ui.painter()).len();
+            self.menubar_at = self.menubar_at.min(titles.saturating_sub(1));
+            // What a screen reader is to say has the focus: the title the keys are on.
+            winui::keys_with(&ctx, chrome::menubar_title_id(self.menubar_at));
+            let (left, right, down) = ctx.input_mut(|i| {
+                (
+                    i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowLeft),
+                    i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowRight),
+                    i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown),
+                )
+            });
+            let (next, before) = if winui::rtl() {
+                (left, right)
+            } else {
+                (right, left)
+            };
+            if titles > 0 && (next || before) {
+                let step = if next { 1 } else { titles - 1 };
+                self.menubar_at = (self.menubar_at + step) % titles;
+                crate::chrome::show_cues(&ctx);
+            }
+            if down {
+                let i = self.menubar_at;
+                self.open_menu = chrome::menubar_next(self.open_menu, MenuBarEvent::Open(i));
+                chrome::start_keyboard(&ctx, &format!("menu-{i}"));
+            }
+        }
+
         // Menu bar and its popups: which menu is open is chrome::menubar_next's to say.
         if let Some(event) = chrome::menu_bar(ui, o, w, self.open_menu) {
+            if event == chrome::MenuBarEvent::Keys {
+                self.give_keys(Pane::Bar);
+            }
             self.open_menu = chrome::menubar_next(self.open_menu, event);
         }
         // A menu opened by Left or Right is drawn in the same pass as the one it replaces (a
@@ -9538,10 +9589,13 @@ impl App {
                     Some(Pane::Tree)
                 } else if self.list.has_keys() {
                     Some(Pane::List)
+                } else if self.bar_keys {
+                    Some(Pane::Bar)
                 } else {
                     None
                 };
-                self.give_keys(tab_to(from, self.show_categories, back));
+                let pane = tab_to(from, self.show_categories, back);
+                self.give_keys(pane);
                 crate::chrome::show_cues(&ctx);
             }
         }
@@ -14129,11 +14183,13 @@ mod stop_all_tests {
 mod pane_tests {
     use super::{Pane, tab_to};
 
-    /// #1190: Tab goes round the toolbar, the Categories tree and the download list (Shift+Tab
-    /// the other way), the tree left out while it is hidden; from nothing (a click on the
-    /// toolbar), Tab starts at the toolbar and Shift+Tab at the list.
+    /// #1190: Tab goes round the toolbar, the Categories tree, the download list and the menu
+    /// bar (Shift+Tab the other way), the tree left out while it is hidden; from nothing (a click
+    /// on the toolbar), Tab starts at the toolbar and Shift+Tab at the bar (the ring's last).
+    /// The bar is where Tab from the list goes, and Shift+Tab from the toolbar: the way a reader
+    /// reaches the menus at all.
     #[test]
-    fn tab_goes_round_the_toolbar_the_tree_and_the_list() {
+    fn tab_goes_round_the_toolbar_the_tree_the_list_and_the_menu_bar() {
         use Pane::*;
         let round = |from, shown, back| {
             let mut at = from;
@@ -14145,19 +14201,19 @@ mod pane_tests {
             }
             seen
         };
-        assert_eq!(
-            round(Some(List), true, false),
-            [Toolbar, Tree, List, Toolbar]
-        );
-        assert_eq!(round(Some(List), true, true), [Tree, Toolbar, List, Tree]);
-        assert_eq!(
-            round(Some(List), false, false),
-            [Toolbar, List, Toolbar, List]
-        );
+        assert_eq!(round(Some(List), true, false), [Bar, Toolbar, Tree, List]);
+        assert_eq!(round(Some(List), true, true), [Tree, Toolbar, Bar, List]);
+        assert_eq!(round(Some(List), false, false), [Bar, Toolbar, List, Bar]);
         // The tree had the keys as it was hidden: on to the toolbar.
         assert_eq!(tab_to(Some(Tree), false, false), Toolbar);
         assert_eq!(tab_to(None, true, false), Toolbar);
-        assert_eq!(tab_to(None, true, true), List);
+        assert_eq!(tab_to(None, true, true), Bar);
+        // The bar is one step from the list either way: Tab from the list reaches the menus, and
+        // Shift+Tab from the toolbar comes back to them.
+        assert_eq!(tab_to(Some(List), true, false), Bar);
+        assert_eq!(tab_to(Some(Toolbar), true, true), Bar);
+        assert_eq!(tab_to(Some(Bar), true, false), Toolbar);
+        assert_eq!(tab_to(Some(Bar), true, true), List);
     }
 }
 
