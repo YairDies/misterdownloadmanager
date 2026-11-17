@@ -244,7 +244,10 @@ pub fn menu_bar(ui: &mut Ui, o: Pos2, width: f32, open: Option<usize>) -> Option
     for (i, (label, x, w, tx)) in menus(&p).iter().enumerate() {
         // From the leading edge: the first menu at the right in RTL.
         let rc = winui::rect(Rect::from_min_size(o + vec2(*x, 0.0), vec2(*w, MENU_H)));
-        let resp = titles_ui.interact(rc, egui::Id::unique(("menubar", i)), winui::pointer_only());
+        // A Tab stop of egui's own chain: the menu bar is where Tab from the list goes (and
+        // Shift+Tab from the toolbar), so a reader can reach the menus at all. Enter or Space
+        // opens the title's menu, as its click does (#1190).
+        let resp = titles_ui.interact(rc, egui::Id::unique(("menubar", i)), egui::Sense::click());
         // Its name carries the key that opens it ("Ver Alt+V", each language's own letter): the
         // Windows adapter does not pass AccessKit's access key on to UI Automation, so a reader
         // hears only what the name holds (#1190).
@@ -828,6 +831,21 @@ fn keyboard<C: Clone>(
         });
         keys.into_iter().map(Press::Key).collect()
     };
+    // The letter that opened this menu (this pass) is the menu's own: it must not also pick an
+    // item of it — Alt+T opened Tareas and ran "Abrir archivo torrent...", Alt+A opened Archivo
+    // and ran the Delete item's (#1190). The pass's keys are taken before the window's own code
+    // runs (MenuKeys), so the app marks that letter where it opens the menu.
+    if let Some(letter) = ctx
+        .data_mut(|d| d.remove_temp::<(String, u64)>(egui::Id::unique("menu-opened-by-letter")))
+        .filter(|(_, at)| *at == ctx.cumulative_pass_nr())
+        .map(|(letter, _)| letter)
+    {
+        // egui-winit sends a typed letter as both, its key and its text, so both go.
+        keys.retain(|press| !match press {
+            Press::Key(k) => k.name().to_lowercase() == letter,
+            Press::Text(t) => t.to_lowercase() == letter,
+        });
+    }
     // Pressed in the menu's own windows: popup_level noted them as those windows drew.
     keys.extend(
         ctx.data_mut(|d| d.remove_temp::<Vec<egui::Key>>(sub_key.with("window-keys")))
@@ -1976,6 +1994,9 @@ pub fn toolbar(
             ui.ctx().accesskit_node_builder(resp.id, |n| {
                 n.set_has_popup(HasPopup::Menu);
                 n.add_action(Action::Expand);
+                // Its menu is shut: without a state, UI Automation calls the node a leaf and a
+                // reader then never says the button holds more than itself (#1190).
+                n.set_expanded(false);
             });
             if ui.input(|inp| inp.has_accesskit_action_request(resp.id, Action::Expand)) {
                 event = Some(ToolbarEvent::Drop(i, pos2(winui::mx(x), o.y + 85.0)));

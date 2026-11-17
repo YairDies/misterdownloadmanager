@@ -9446,15 +9446,16 @@ impl App {
                 // The letter that opened the menu is the menu's own: it must not also pick an
                 // item of it (Alt+T opened Tareas and ran "Abrir archivo torrent...", Alt+A
                 // opened Archivo and ran Delete's) (#1190).
-                if letter.is_some() {
-                    ctx.input_mut(|i| {
-                        i.events.retain(|e| {
-                            !matches!(
-                                e,
-                                egui::Event::Key { pressed: true, modifiers, .. }
-                                    if modifiers.alt && !modifiers.ctrl && !modifiers.command
-                            )
-                        })
+                if let Some(letter) = &letter {
+                    // The menu's own key for this pass: the pass's keys were taken before this
+                    // ran (chrome::MenuKeys), so the menu is told to leave this one alone
+                    // instead of consuming it here (#1190).
+                    let at = ctx.cumulative_pass_nr();
+                    ctx.data_mut(|d| {
+                        d.insert_temp(
+                            egui::Id::unique("menu-opened-by-letter"),
+                            (letter.clone(), at),
+                        )
                     });
                 }
             }
