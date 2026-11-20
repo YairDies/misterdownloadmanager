@@ -303,14 +303,14 @@ pub fn menu_bar(ui: &mut Ui, o: Pos2, width: f32, open: Option<usize>) -> Option
     hit
 }
 
-/// The menu-bar title under `pos` (main-window coordinates), as [`menu_bar`] lays them out at
-/// `o`: the first menu at the right in RTL.
 /// A menu-bar title's widget id (#1190): the Tab stop of its own, and what the app focuses when
 /// the bar takes the keys.
 pub fn menubar_title_id(i: usize) -> egui::Id {
     egui::Id::unique(("menubar", i))
 }
 
+/// The menu-bar title under `pos` (main-window coordinates), as [`menu_bar`] lays them out at
+/// `o`: the first menu at the right in RTL.
 pub fn menubar_title_at(p: &egui::Painter, o: Pos2, pos: Pos2) -> Option<usize> {
     menus(p).iter().position(|(_, x, w, _)| {
         winui::rect(Rect::from_min_size(o + vec2(*x, 0.0), vec2(*w, MENU_H))).contains(pos)
@@ -562,11 +562,11 @@ fn mirror_for_screen_readers<C>(
                 MenuEntry::Sep => continue,
             };
             let (t, _) = plain(crate::i18n::tc("menu", label));
-            // Its shortcut is said with its name ("Add new download Ctrl+N"): the menu draws it
-            // in its own column, where a reader cannot reach it (#1190).
+            // Its shortcut is said with its name ("Add new download Ctrl+N"), spelled as the
+            // menu draws it in its own column, where a reader cannot reach it (#1190).
             let t = match e {
                 MenuEntry::Item(_, c, ..) | MenuEntry::Radio(_, c, ..) => match hint(c) {
-                    Some(keys) => format!("{} {}", without_shortcut(&t), keys),
+                    Some(keys) => format!("{} {}", without_shortcut(&t), key_label(keys)),
                     None => t,
                 },
                 _ => t,
@@ -1698,10 +1698,18 @@ fn popup_level<C: Clone>(
                 MenuEntry::Item(_, c, ..) | MenuEntry::Radio(_, c, ..) => hint(c),
                 _ => None,
             };
-            // Its shortcut is said with its name ("Add new download Ctrl+N") (#1190).
-            let t = match keys {
-                Some(keys) => format!("{} {}", without_shortcut(&t), keys),
-                None => t,
+            // Its shortcut is said with its name ("Add new download Ctrl+N"), spelled as the menu
+            // draws it in its own column (#1190). Only an item that has a shortcut drops it from
+            // the text drawn: a translation without one may end in its own access letter
+            // ("Tell a friend (&F)"), which cutting would take away with the underline it needs.
+            let t_visual: &str = if keys.is_some() {
+                without_shortcut(&t)
+            } else {
+                &t
+            };
+            let t_accessibility = match keys {
+                Some(keys) => format!("{} {}", t_visual, key_label(keys)),
+                None => t.clone(),
             };
             // The entry's node: a menu item (a check or radio item when it is one), its name,
             // whether it can be used, and for a submenu that it opens one.
@@ -1715,7 +1723,7 @@ fn popup_level<C: Clone>(
                 MenuEntry::Item(..) if checked => (egui::Role::MenuItemCheckBox, Some(true)),
                 _ => (egui::Role::MenuItem, None),
             };
-            winui::expose(&item, role, &t, enabled, on);
+            winui::expose(&item, role, &t_accessibility, enabled, on);
             if let MenuEntry::Sub(..) = e {
                 let open = open_sub == Some(i);
                 ui.ctx().accesskit_node_builder(item.id, |n| {
@@ -1745,7 +1753,14 @@ fn popup_level<C: Clone>(
                 }
                 _ => {}
             }
-            let drawn = text_font(&painter, winui::segoe(), o.x + 38.0, y + 14.0, &t, color);
+            let drawn = text_font(
+                &painter,
+                winui::segoe(),
+                o.x + 38.0,
+                y + 14.0,
+                t_visual,
+                color,
+            );
             // The shortcut at the trailing edge, in the menu's quieter ink.
             if let Some(k) = keys {
                 winui::text_right(
@@ -1760,7 +1775,7 @@ fn popup_level<C: Clone>(
             if let Some(m) = mn
                 && cues(ctx)
             {
-                let (x0, x1) = winui::char_span(&painter, &winui::segoe(), &t, m, drawn);
+                let (x0, x1) = winui::char_span(&painter, &winui::segoe(), t_visual, m, drawn);
                 fill(&painter, x0, y + 16.0, x1, y + 16.0, color);
             }
             // The check box column: x 12..21 from the leading edge (the glyphs keep their
