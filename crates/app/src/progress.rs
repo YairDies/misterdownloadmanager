@@ -1374,6 +1374,31 @@ impl Progress {
                 winui::text_fit(p, o.x + x, o.y + base, s, color, o.x + PAGE_TEXT_RIGHT);
             winui::copyable(ui, rect, key, s, cut);
         };
+
+        // Each row as a node of its own, named by its caption and carrying its value (#1406):
+        // the page paints them, and painted text is invisible to a reader on its own. The whole
+        // value is said, even where the row itself shows it cut with "..." ([fit] draws the cut
+        // one). A focusable label, as the help windows' blocks are (#1407): read with Tab, or
+        // from the reader's own review keys, without touching the copy menu the value keeps
+        // (Sense::focusable_noninteractive senses no clicks).
+        let spoken = |ui: &Ui, label: &str, base: f32, value: &str| {
+            let caption = crate::i18n::t(label);
+            let name = if value.is_empty() {
+                caption.to_owned()
+            } else {
+                format!("{caption}: {value}")
+            };
+            let rc = winui::rect(egui::Rect::from_min_max(
+                egui::pos2(o.x + 33.0, o.y + base - 12.0),
+                egui::pos2(o.x + PAGE_TEXT_RIGHT, o.y + base + 4.0),
+            ));
+            let resp = ui.interact(
+                rc,
+                egui::Id::unique(("status-row", item.id, label)),
+                egui::Sense::focusable_noninteractive(),
+            );
+            winui::expose(&resp, egui::Role::Label, &name, true, None);
+        };
         let web_page = item.got_web_page();
         // A failure that takes a paragraph to explain: the reason under "Error", in the rows of
         // the sizes and times, which say nothing then (a site's page, #701; an answer far smaller
@@ -1446,6 +1471,12 @@ impl Progress {
             // A video's stream, not its page (#795).
             &crate::i18n::ltr(item.file_address().as_str()),
             winui::TEXT(),
+        );
+        spoken(
+            ui,
+            "Address",
+            44.0,
+            &crate::i18n::ltr(item.file_address().as_str()),
         );
         let rows: [(&str, f32, f32, String); 6] = [
             // i18n: noun: label before the download's state
@@ -1542,6 +1573,7 @@ impl Progress {
                 winui::TEXT()
             };
             fit(ui, label, vx, base, &value, vc);
+            spoken(ui, label, base, &value);
         }
         if explained {
             winui::paragraph(
