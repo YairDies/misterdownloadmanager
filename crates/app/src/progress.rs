@@ -784,9 +784,19 @@ impl Progress {
         // the file is checked or a video joined (#736), it starts again in the accent colour and
         // shows how far that is.
         let bar = r(lower, 17.0, 180.0, 513.0, 16.0);
-        match finishing_fraction(snap) {
+        let finishing = finishing_fraction(snap);
+        match finishing {
             Some(f) => winui::meter_in(&p, bar, f as f32, crate::theme::colors().accent),
             None => winui::meter(&p, bar, drawn.0 as f32),
+        }
+        // The same bar for a screen reader (#1406): the value it fills towards, which is what the
+        // page's own text says (the download's fraction; while the last bytes are checked or a
+        // video's streams joined, how far that is). Unnamed, as the list's rows are: a name is
+        // read in place of the value. A download whose size isn't known has no percentage to tell
+        // and gets no node, and neither has one that is finished (the bar is full, the text says
+        // Complete).
+        if let Some(f) = finishing.or(frac) {
+            winui::expose_progress(ui, bar, egui::Id::unique(("progress", item.id, "bar")), f);
         }
 
         let mut action = if hide { Action::Hide } else { Action::None };
