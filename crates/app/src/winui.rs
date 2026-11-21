@@ -5194,6 +5194,16 @@ pub fn expose_progress(ui: &Ui, rc: Rect, id: egui::Id, frac: f64) {
     ui.interact(rc, id, Sense::hover());
     ui.ctx().accesskit_node_builder(id, |n| {
         n.set_role(egui::Role::ProgressIndicator);
+        // Its rectangle, as egui gives one to every control it makes a node of (response.rs,
+        // fill_accesskit_node_common): without it UI Automation reports the node without any
+        // bounds, so a reader's review keys have nowhere on the bar to land — only its value,
+        // through the RangeValue pattern, would reach them.
+        n.set_bounds(egui::accesskit::Rect {
+            x0: f64::from(rc.min.x),
+            y0: f64::from(rc.min.y),
+            x1: f64::from(rc.max.x),
+            y1: f64::from(rc.max.y),
+        });
         n.set_min_numeric_value(0.0);
         n.set_max_numeric_value(100.0);
         n.set_numeric_value(progress_value(frac));
