@@ -1392,12 +1392,7 @@ impl Progress {
         // from the reader's own review keys, without touching the copy menu the value keeps
         // (Sense::focusable_noninteractive senses no clicks).
         let spoken = |ui: &Ui, label: &str, base: f32, value: &str| {
-            let caption = crate::i18n::t(label);
-            let name = if value.is_empty() {
-                caption.to_owned()
-            } else {
-                format!("{caption}: {value}")
-            };
+            let name = spoken_name(crate::i18n::t(label), value);
             let rc = winui::rect(egui::Rect::from_min_max(
                 egui::pos2(o.x + 33.0, o.y + base - 12.0),
                 egui::pos2(o.x + PAGE_TEXT_RIGHT, o.y + base + 4.0),
@@ -2583,9 +2578,46 @@ fn connections(ui: &mut Ui, p: &egui::Painter, o: Pos2, snap: Option<&Snapshot>)
     );
 }
 
+/// A status row's name for a screen reader: its caption, then its whole value, with every `&`
+/// doubled. [`winui::expose`] reads a single `&` as a keyboard mnemonic and drops it — right for a
+/// button's own label, and wrong here, where the row draws its caption and its value as they are:
+/// an address with a query string (`?seed=1406&rate=24K`) has to be read whole, and a file name
+/// with one too (#1406, the review's fix: `expose` turns `&&` back into one `&`).
+fn spoken_name(caption: &str, value: &str) -> String {
+    let name = if value.is_empty() {
+        caption.to_owned()
+    } else {
+        format!("{caption}: {value}")
+    };
+    name.replace('&', "&&")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The name a row is said with: caption, then value, and the value's own `&` doubled so that
+    /// `winui::expose` (which reads `&&` as one `&`) says the address whole.
+    #[test]
+    fn a_row_with_a_query_string_is_said_whole() {
+        assert_eq!(
+            spoken_name(
+                "Address",
+                "http://127.0.0.1:8099/gen/2G/a.bin?seed=1406&rate=24K&Expires=7"
+            ),
+            "Address: http://127.0.0.1:8099/gen/2G/a.bin?seed=1406&&rate=24K&&Expires=7"
+        );
+        // A file name with one, in any row's value (and the caption as it is drawn: no `&` there).
+        assert_eq!(
+            spoken_name("File size", "2.000 GB & more"),
+            "File size: 2.000 GB && more"
+        );
+    }
+
+    #[test]
+    fn a_row_without_a_value_is_its_caption_alone() {
+        assert_eq!(spoken_name("Time left", ""), "Time left");
+    }
 
     /// A live stream being recorded: its Pause button stops and saves it; while it is saved
     /// the button waits; every other download's is Pause or Resume as before. Only a live
