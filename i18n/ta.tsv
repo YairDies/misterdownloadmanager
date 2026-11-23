@@ -12,6 +12,11 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	An unknown site wants to send {n} link to Link grabber.|An unknown site wants to send {n} links to Link grabber.	அறியப்படாத தளம் {n} இணைப்பை இணைப்பு கிராப்பருக்கு அனுப்ப விரும்புகிறது.|அறியப்படாத தளம் {n} இணைப்புகளை இணைப்பு கிராப்பருக்கு அனுப்ப விரும்புகிறது.
+#. count in traypanel.rs
+#. the notification-area icon's panel (#1365), under the downloads it lists: how many others are running; {n} a number
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	And {n} more|And {n} more	மேலும் {n} பதிவிறக்கங்கள்|மேலும் {n} பதிவிறக்கங்கள்
 #. count in torrent downloads
 #. number of additional files in a list of files
 #. {n} = a number (keep the braces as they are)
@@ -49,6 +54,11 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	Matches {n} article now (it adds new ones only):|Matches {n} articles now (it adds new ones only):	இப்போது {n} கட்டுரையுடன் பொருந்துகிறது (புதியவற்றை மட்டுமே சேர்க்கிறது):|இப்போது {n} கட்டுரைகளுடன் பொருந்துகிறது (புதியவற்றை மட்டுமே சேர்க்கிறது):
+#. count in archtest.rs
+#. in a download's log: the archive test found files in it that don't read back whole; {n} how many, {files} their names
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	The archive test found {n} damaged file: {files}|The archive test found {n} damaged files: {files}	காப்பகச் சோதனையில் {n} சேதமடைந்த கோப்பு கண்டறியப்பட்டது: {files}|காப்பகச் சோதனையில் {n} சேதமடைந்த கோப்புகள் கண்டறியப்பட்டன: {files}
 #. count in a dialog box
 #. Cancel in Download File Info with downloads waiting behind it
 #. {n} = a number (keep the braces as they are)
@@ -227,6 +237,11 @@
 #. a 24-hour clock, with an example
 #, machine
 	24-hour (21:41)	24-மணிநேரம் (21:41)
+#. text in archtest.rs
+#. why an archive wasn't tested (after "Couldn't test {name}: "); 7-Zip is a program's name, {error} its words, in English
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	7-Zip couldn't test it ({error})	7-ஜிப் அதைச் சோதிக்க முடியவில்லை ({error})
 #. window title in extracting archives (a download's log, the Archive password window)
 #. window title: 7-Zip (a program's name) must be installed
 #, machine
@@ -278,6 +293,14 @@
 #. Options → DNS: the NextDNS configuration ID typed isn't one
 #, machine
 	A NextDNS configuration ID is six letters and digits (0-9, a-f).	NextDNS உள்ளமைவு ID ஆறு எழுத்துகளும் எண்களும் (0-9, a-f) கொண்டது.
+#. text in the Download video window
+#. why "Embed chapters" (and the subtitles) are greyed in Download video: only a part of the video is downloaded, and its chapters and subtitles would be the whole video's
+#, machine
+	A part is saved without the video's chapters and subtitles	வீடியோவின் அத்தியாயங்கள் மற்றும் வசனங்கள் இல்லாமல் ஒரு பகுதி சேமிக்கப்பட்டது
+#. text in the Download video window
+#. why Part is greyed in Download video: the page is a playlist, whose videos are downloaded whole
+#, machine
+	A playlist's videos are downloaded whole	பிளேலிஸ்ட்டின் வீடியோக்கள் முழுமையாகப் பதிவிறக்கப்படுகின்றன
 #. text in the Options window
 #. Options → Sites Logins → Cookies for video sites: the tooltip of the profile box
 #, machine
@@ -314,6 +337,10 @@
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
 	a volume of it is missing	அதில் ஒரு தொகுதி காணவில்லை
+#. text in archtest.rs
+#. why a split archive (in several files, its volumes) isn't tested yet, in "{name} isn't complete ({why})": one of its files isn't downloaded yet
+#, machine
+	a volume of it isn't there yet	அதன் ஒரு தொகுதி இன்னும் இல்லை
 #. window title in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #, machine
 	About Mister Download Manager	Mister Download Manager பற்றி
@@ -322,6 +349,7 @@
 #, machine
 	about {ms} ms ({reach})	சுமார் {ms} மி.வி ({reach})
 #. text in the Download video window
+#. in Download video beside the part's From and To: the part's size, estimated from the whole video's; {size} is "12.3 MB"
 #. a file size that is only an estimate, as a screen reader says it in the Download video window's list of qualities; {size} is "532 MB"
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
@@ -888,7 +916,7 @@
 #. a country's name (where a download's server is)
 #, machine
 	Canada	கனடா
-#. button in the Batch download window; button in categories.rs; text in the Checksum window; button in a dialog box; button in extracting archives (a download's log, the Archive password window); button in the Find window; button in gallerydlg.rs; text in the Link grabber window; text in the Help menu's windows (About, updates, shortcuts, Tell a friend); button in langpick.rs; button in the Options window; button in a download's progress window; text in remote.rs; button in the Scheduler window; button in the Add torrent window; button in the Download video window
+#. button in the Batch download window; button in categories.rs; text in the Checksum window; button in a dialog box; button in extracting archives (a download's log, the Archive password window); button in the Find window; button in gallerydlg.rs; text in the Link grabber window; text in the Help menu's windows (About, updates, shortcuts, Tell a friend); button in langpick.rs; button in the Options window; button in a download's progress window; text in remote.rs; button in the Scheduler window; button in the Add torrent window; button in traypanel.rs; button in the Download video window
 #. button: stop downloading the update
 #, machine
 	Cancel	ரத்துசெய்
@@ -986,6 +1014,10 @@
 #. text in helpers.rs
 #, machine
 	Check your connection, then try again, or get them later from the video window.	உங்கள் இணைப்பைச் சரிபார்த்து, மீண்டும் முயற்சிக்கவும் அல்லது பின்னர் வீடியோ சாளரத்திலிருந்து அவற்றைப் பெறவும்.
+#. text in the Options window
+#. tooltip of "Show downloads when the notification area icon is clicked": what the click on MDM's tray icon does when it is ticked and when not
+#, machine
+	Checked, a click on MDM's icon shows what is downloading, with Pause and Cancel, and a double click opens the window; unchecked, a click shows or hides the window	சரிபார்க்கப்பட்டால், MDM ஐகானைக் கிளிக் செய்தால் பதிவிறக்கங்கள், இடைநிறுத்தம் மற்றும் ரத்துசெய்தல் ஆகியவை காண்பிக்கப்படும், மேலும் இருமுறை கிளிக் செய்தால் சாளரம் திறக்கும்; சரிபார்க்கப்படாவிட்டால், ஒரு கிளிக் சாளரத்தைக் காண்பிக்கும் அல்லது மறைக்கும்
 #. text in the Options window
 #. tooltip of the close-setting: checked keeps MDM running when the window closes, in the notification area when available or else the taskbar; downloads continue; unchecked closing quits
 #, machine
@@ -1101,7 +1133,7 @@
 #. text in the Options window
 #, machine
 	Clock:	கடிகாரம்:
-#. text in the Checksum window; text in the main window (menus, toolbar, Categories pane); button in crashui.rs; button in a dialog box; button in extension.rs; button in the Help menu's windows (About, updates, shortcuts, Tell a friend); button in helpers.rs; button in the download list; button in the Options window; button in rssdlg.rs; button in torrentfiles.rs; text in standard windows
+#. text in archtest.rs; text in the Checksum window; text in the main window (menus, toolbar, Categories pane); button in crashui.rs; button in a dialog box; button in extension.rs; button in the Help menu's windows (About, updates, shortcuts, Tell a friend); button in helpers.rs; button in the download list; button in the Options window; button in rssdlg.rs; button in torrentfiles.rs; text in traypanel.rs; text in standard windows
 #. both verbs: Verify = check the file now; Close = close the window
 #. tooltip of the × that closes the Categories pane
 #. verb: closes this window
@@ -1251,6 +1283,11 @@
 #. {name} = a file name; {error} = an error message (keep the braces as they are)
 #, machine
 	Couldn't look for a newer {name}: {error}	புதிய {name} ஐத் தேட முடியவில்லை: {error}
+#. text in archtest.rs
+#. in a download's log: {name} is the archive's file name, {why} the reason it wasn't tested (as after "Couldn't extract {name}: ")
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Couldn't test {name}: {why}	{name} ஐச் சோதிக்க முடியவில்லை: {why}
 #. checkbox in the Add torrent window
 #. Add torrent: keep a multi-file torrent inside its own outer folder; untick to use Save to directly
 #, machine
@@ -1298,6 +1335,18 @@
 #. adverb: every day (the other choice is once, on a date)
 #, machine
 	Daily	தினசரி
+#. text in the download list (sizes, speeds, status)
+#. a download's status: its archive's test (Options → Archives) found it damaged. One short word: the list's Status column is narrow
+#, machine
+	Damaged	சேதமடைந்தது
+#. window title in archtest.rs
+#. window title: an archive (zip, 7z, rar) that was downloaded is damaged
+#, machine
+	Damaged archive	சேதமடைந்த காப்பகம்
+#. text in the download list (sizes, speeds, status)
+#. a download's status, whole (the Status cell's tip): its archive's test found it damaged; "Redownload" is the right-click command
+#, machine
+	Damaged: its archive test found errors. Right-click → Redownload downloads it again	சேதமடைந்தது: அதன் காப்பகச் சோதனையில் பிழைகள் கண்டறியப்பட்டன. வலது கிளிக் → மீண்டும் பதிவிறக்கு என்பதைத் தட்டவும்
 #. text in the Options window
 #, machine
 	Date order:	தேதி வரிசை:
@@ -1308,7 +1357,7 @@
 #. a date's order: day first (30/10/2026)
 #, machine
 	Day, month, year	நாள், மாதம், வருடம்
-#. page title in the Options window
+#. page title in the Options window; text in the Options window
 #, machine
 	Debrid service accounts	டீப்ரிட் சேவை கணக்குகள்
 #. text in the Scheduler window
@@ -1498,14 +1547,6 @@
 #. window title in a dialog box
 #, machine
 	Download later	பின்னர் பதிவிறக்கு
-#. text in the Scheduler's download limits
-#. a11y name of the second Download limits box, where "every {n} hours" puts its {n}
-#, machine
-	Download limit: every how many hours	பதிவிறக்க வரம்பு: எத்தனை மணிநேரத்திற்கு ஒருமுறை
-#. text in the Scheduler's download limits
-#. a11y name of the first Download limits box, where "Download no more than {n} MBytes" puts its {n}
-#, machine
-	Download limit: MBytes	பதிவிறக்க வரம்பு: MBytes
 #. window title in a dialog box; text in the Options window; checkbox in the Options window; text in the Scheduler window
 #. the Scheduler's page (and checkbox) that caps how much is downloaded in a time
 #, machine
@@ -1601,6 +1642,11 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Downloading MDM's own copy...	MDM இன் நகலைப் பதிவிறக்குகிறது...
+#. text in archtest.rs
+#. in a download's log: after its archive test found damaged files, only their bytes are downloaded again from the same server; {size} like "1.20 MB"
+#. {size} = a file size such as "4.2 MB" (keep the braces as they are)
+#, machine
+	Downloading the damaged parts again ({size})	சேதமடைந்த பகுதிகளை மீண்டும் பதிவிறக்குகிறது ({size})
 #. text in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #. Check for updates, while Update now downloads; {percent} like "42%"
 #, machine
@@ -1630,8 +1676,9 @@
 #. the notice shown once, the first time a download comes from a browser's private (incognito) window: it stays in MDM's list like any other, after a restart too; where to turn that off. {options} = the Options window, {general} = its General tab, {checkbox} = the checkbox "Keep private-window downloads in the list"
 #, machine
 	Downloads from a browser's private window stay in MDM's list like any other, also after MDM restarts; their cookies are never saved. To keep them in memory only, untick {options} → {general} → {checkbox}.	உலாவி தனிப்பட்ட சாளரத்திலிருந்து பதிவிறக்கங்கள் MDM இன் பட்டியலில் மற்றவை போலவே இருக்கும், MDM மறுதொடக்கம் செய்யப்பட்ட பிறகும்; அவற்றின் குக்கீகள் ஒருபோதும் சேமிக்கப்படாது. அவற்றை நினைவகத்தில் மட்டும் வைத்திருக்க, {options} → {general} → {checkbox} என்பதைத் தேர்வுநீக்கவும்.
-#. text in the tray icon's menu
+#. text in the tray icon's menu; text in traypanel.rs
 #. tray menu: a submenu of the downloads now running; choosing one shows its progress window
+#. the notification-area icon's panel (#1365): its title, over the downloads now running (also the tray menu's submenu)
 #, machine
 	Downloads in progress	செயலில் உள்ள பதிவிறக்கங்கள்
 #. text in a dialog box
@@ -1798,6 +1845,10 @@
 #. what a keyboard shortcut does in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #, machine
 	Everything at its normal size (100%)	அனைத்தும் அதன் இயல்பான அளவில் (100%)
+#. text in the Download video window
+#. choice in Download video's Part: the part is encoded again so it starts and ends exactly at From and To (slower)
+#, machine
+	Exact cut, encoded again	துல்லியமான வெட்டு, மீண்டும் குறியாக்கம் செய்யப்பட்டது
 #. text in the Options window
 #. label before an example date and time written the chosen way
 #, machine
@@ -1882,6 +1933,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Faroe Islands	ஃபாரோ தீவுகள்
+#. text in the Download video window
+#. tooltip of "Quick cut, at keyframes" in Download video: what it does
+#, machine
+	Fast: the streams are copied as they are, so the part may start a little before From	வேகமானது: ஸ்ட்ரீம்கள் அப்படியே நகலெடுக்கப்படுகின்றன, எனவே பகுதி தொடக்க நேரத்திற்கு சற்று முன்னதாகத் தொடங்கலாம்
 #. text in the Scheduler window
 #, machine
 	February	பிப்ரவரி
@@ -2133,6 +2188,10 @@
 #. message or event log entry in the main window
 #, machine
 	from the command line	கட்டளை வரியிலிருந்து
+#. text in the Download video window
+#. in Download video after "Only a part": {from} and {to} are boxes where times are typed (1:30, 1:02:03), drawn where they stand in the translation
+#, machine
+	from {from} to {to}	{from} முதல் {to} வரை
 #. text in the Batch download window
 #, machine
 	From:	தொடக்கம்:
@@ -3341,6 +3400,10 @@
 #. message or event log entry in the main window
 #, machine
 	No download links were found in the clipboard. Copy a text with http, https, ftp or magnet links in it, and try again.	கிளிப்போர்டில் பதிவிறக்க இணைப்புகள் எதுவும் கண்டறியப்படவில்லை. http, https, ftp அல்லது காந்த இணைப்புகள் உள்ள உரையை நகலெடுத்து மீண்டும் முயற்சிக்கவும்.
+#. text in traypanel.rs
+#. the notification-area icon's panel (#1365) when no download is running
+#, machine
+	No downloads are running	பதிவிறக்கங்கள் எதுவும் இயங்கவில்லை
 #. message or event log entry in the main window
 #. title in the empty download list (this category or queue has no downloads)
 #, machine
@@ -3500,6 +3563,15 @@
 #. Options → Accounts: the service doesn't take this file host (shouldn't happen when signing in)
 #, machine
 	not supported by this service	இந்தச் சேவையால் ஆதரிக்கப்படவில்லை
+#. text in archtest.rs
+#. in a download's log and the Test archive message: a split archive is tested only once every volume is downloaded; {name} is its file name, {why} which volume is missing
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Not tested yet: {name} isn't complete ({why})	இன்னும் சோதிக்கப்படவில்லை: {name} முழுமையடையவில்லை ({why})
+#. text in archtest.rs
+#. in a download's log: an archive larger than Options → Archives' limit for its test wasn't tested; {limit} like "4.00 GB"; "Test archive" is the right-click command
+#, machine
+	Not tested: it is larger than {limit} (Options → Archives). Right-click → Test archive tests it	சோதிக்கப்படவில்லை: இது {limit} ஐ விட பெரியது (விருப்பங்கள் → காப்பகங்கள்). வலது கிளிக் → காப்பகத்தைச் சோதி என்பதைத் தட்டவும்
 #. text in the Options window
 #, machine
 	Not used: file parts are written next to the file	பயன்படுத்தப்படவில்லை: கோப்பு பாகங்கள் கோப்புக்கு அடுத்ததாக எழுதப்படுகின்றன
@@ -3615,6 +3687,10 @@
 #. message or event log entry in the main window
 #, machine
 	Only a finished download, or one not started yet, can be moved. Stop it and finish it first.	முடிந்த பதிவிறக்கம் அல்லது இன்னும் தொடங்கப்படாத பதிவிறக்கம் மட்டுமே நகர்த்த முடியும். முதலில் அதை நிறுத்தி முடிக்கவும்.
+#. text in the Download video window
+#. checkbox in Download video: download only a part of the video or sound; the From and To boxes follow it
+#, machine
+	Only a part	ஒரு பகுதி மட்டும்
 #. text in the Scheduler window
 #. the Scheduler, under "Wake the computer to run this queue" (Linux): the computer's wake alarm can be set by an administrator only
 #, machine
@@ -3632,6 +3708,10 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 	Only the first {n} videos are listed.	முதல் {n} வீடியோக்கள் மட்டுமே பட்டியலிடப்பட்டுள்ளன.
+#. message or event log entry in the main window
+#. event log: a torrent through a debrid account gets only the files ticked in Add torrent; {files} how many ("3")
+#, machine
+	Only the {files} file(s) ticked in Add torrent	டோரண்டைச் சேர் என்பதில் தேர்ந்தெடுக்கப்பட்ட {files} கோப்பு(கள்) மட்டும்
 #. checkbox in a dialog box
 #, machine
 	Only while I'm using the computer	நான் கணினியைப் பயன்படுத்தும்போது மட்டும்
@@ -3656,7 +3736,8 @@
 #. checkbox in the Add torrent window
 #, machine
 	Open magnet links and .torrent files with Mister Download Manager	Mister Download Manager உடன் மேக்னட் இணைப்புகள் மற்றும் .torrent கோப்புகளைத் திற
-#. text in the tray icon's menu
+#. text in the tray icon's menu; text in traypanel.rs
+#. the notification-area icon's panel (#1365): its button that opens the main window (also the tray menu's first item)
 #, machine
 	Open Mister Download Manager	Mister Download Manager ஐத் திற
 #. text in extension.rs
@@ -3766,6 +3847,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Paraguay	பரகுவே
+#. text in the Download video window
+#. label in Download video before the choice to download only a part of the video or sound (from one time to another)
+#, machine
+	Part	பகுதி
 #. text in the Batch download window; text in a dialog box; label in the Options window; text in the Options window; text in a download's Properties window
 #, machine
 	Password	கடவுச்சொல்
@@ -3962,6 +4047,10 @@
 #. plural noun: the download queues
 #, machine
 	Queues	வரிசைகள்
+#. text in the Download video window
+#. choice in Download video's Part: cut where the video has a keyframe, the streams copied as they are (fast; it may start a little before From)
+#, machine
+	Quick cut, at keyframes	விரைவான வெட்டு, கீஃப்ரேம்களில்
 #. text in the Options window
 #. Options → Sites Logins → Cookies for video sites: a note under the choices
 #, machine
@@ -4013,10 +4102,18 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Recording...	பதிவுசெய்கிறது...
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in archtest.rs
 #. window title, verb: download the file again from the start
 #, machine
 	Redownload	மீண்டும் பதிவிறக்கு
+#. text in archtest.rs
+#. in the "Damaged archive" window, under what was found; "Redownload" is the button beside
+#, machine
+	Redownload downloads every volume again from the start.	மீண்டும் பதிவிறக்கு என்பது ஒவ்வொரு தொகுதியையும் மீண்டும் தொடக்கத்திலிருந்து பதிவிறக்கும்.
+#. text in archtest.rs
+#. in the "Damaged archive" window, under what was found; "Redownload" is the button beside
+#, machine
+	Redownload downloads it again from the start.	மீண்டும் பதிவிறக்கு என்பது அதை மீண்டும் தொடக்கத்திலிருந்து பதிவிறக்கும்.
 #. text in a download's Properties window
 #, machine
 	Referer:	பரிந்துரையாளர்:
@@ -4420,6 +4517,10 @@
 #. checkbox in the Options window
 #, machine
 	Show download progress dialog when a download starts	பதிவிறக்கம் தொடங்கும் போது பதிவிறக்க முன்னேற்ற உரையாடலைக் காட்டு
+#. text in the Options window
+#. checkbox: a click on MDM's icon in the notification area (system tray) shows a small panel over it with the downloads now running, their progress, Pause and Cancel; unticked, the click shows or hides the main window
+#, machine
+	Show downloads when the notification area icon is clicked	அறிவிப்புப் பகுதி ஐகானைக் கிளிக் செய்யும்போது பதிவிறக்கங்களைக் காட்டு
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4576,6 +4677,10 @@
 #. legend: pieces partly downloaded
 #, machine
 	Some	சில
+#. text in archtest.rs
+#. why a split archive (in several files, its volumes) isn't tested yet, in "{name} isn't complete ({why})": some of its files are still downloading or waiting in the list
+#, machine
+	some of its volumes are still downloading	அதன் சில தொகுதிகள் இன்னும் பதிவிறக்கப்படுகின்றன
 #. text in a dialog box
 #, machine
 	Some of the torrent's files are already in this folder:	டொரண்டின் சில கோப்புகள் ஏற்கனவே இந்தக் கோப்புறையில் உள்ளன:
@@ -4712,6 +4817,10 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Starting...	தொடங்குகிறது...
+#. text in the Download video window
+#. tooltip of "Exact cut, encoded again" in Download video: what it does
+#, machine
+	Starts and ends exactly at From and To: ffmpeg encodes the part again, which takes longer	தொடக்க மற்றும் இறுதி நேரங்கள் துல்லியமாக இருக்கும்: ffmpeg பகுதியை மீண்டும் குறியாக்கம் செய்கிறது, இதற்கு அதிக நேரம் எடுக்கும்
 #. text in the Options window
 #. column title: the account's state (premium, days left)
 #, machine
@@ -4875,6 +4984,13 @@
 #. button: asks the chosen DNS for an address, to see it works
 #, machine
 	Test	சோதனை
+#. message or event log entry in the main window
+#, machine
+	Test archive	காப்பகத்தைச் சோதி
+#. text in the Options window
+#. Options → Archives check box with a number box in it: {gb} is the box (a size in gigabytes, 4 at first); the words before it are the check box's caption, those after it follow the box, on one line. A test reads the archive back whole and checks it before its download counts as done
+#, machine
+	Test archives when their download completes, up to {gb} GB	பதிவிறக்கம் முடிந்ததும் காப்பகங்களைச் சோதிக்கவும், {gb} ஜிபி வரை
 #. window title in the Options window
 #. window title: Options → General → Test browser integration
 #, machine
@@ -4883,6 +4999,19 @@
 #. the trailing ... means it opens a window: keep it
 #, machine
 	Test browser integration...	உலாவி ஒருங்கிணைப்பைச் சோதிக்கவும்...
+#. text in archtest.rs
+#. in a download's log: the archive's damaged parts were downloaded again, and its test now finds no error
+#, machine
+	Tested again: the archive has no errors now	மீண்டும் சோதிக்கப்பட்டது: காப்பகத்தில் இப்போது பிழைகள் இல்லை
+#. text in archtest.rs; text in the download list (sizes, speeds, status)
+#. in a download's log: its archive is being tested (read back and checked) before the download counts as done
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Testing the archive...	காப்பகத்தைச் சோதிக்கிறது...
+#. text in the download list (sizes, speeds, status)
+#. a download's status while its archive (zip, 7z, rar) is read back and checked before the download counts as done; {percent} how far, e.g. "45%"
+#, machine
+	Testing the archive... ({percent})	காப்பகத்தைச் சோதிக்கிறது... ({percent})
 #. text in the Scheduler window
 #. Thursday, as short as a calendar's column head (two letters in English)
 #, machine
@@ -4899,6 +5028,10 @@
 #. Options → Archives, in red: the program chosen with "Use another program..." isn't 7-Zip's command line program (an archiver's window was picked instead); 7z.exe is that program's file name
 #, machine
 	That isn't 7-Zip's command line program (7z.exe).	அது 7-Zip இன் கட்டளை வரி நிரல் (7z.exe) அல்ல.
+#. text in the Download video window
+#. why Download Now is greyed in Download video: Part's times are the whole video's (untick Only a part to download it whole)
+#, machine
+	That's the whole video: change From or To, or untick Only a part	அது முழு வீடியோ: தொடக்க அல்லது இறுதி நேரத்தை மாற்றவும், அல்லது ஒரு பகுதி மட்டும் என்பதைத் தேர்வுநீக்கவும்
 #. text in torrent downloads
 #. an error: the copy of the .torrent file the app keeps is missing
 #, machine
@@ -4912,6 +5045,14 @@
 #. text in extracting archives (a download's log, the Archive password window)
 #, machine
 	The archive could not be moved to the Trash: it was kept	காப்பகத்தை குப்பைக்கு நகர்த்த முடியவில்லை: அது வைக்கப்பட்டது
+#. text in archtest.rs
+#. in a download's log: the archive's own structure doesn't read back (its headers, its end), or it isn't the archive its name says
+#, machine
+	The archive test failed: it is damaged, or not the archive its name says	காப்பகச் சோதனை தோல்வியடைந்தது: அது சேதமடைந்துள்ளது, அல்லது அதன் பெயர் குறிப்பிடும் காப்பகம் அல்ல
+#. text in archtest.rs
+#. in a download's log: the archive was read back whole and checked
+#, machine
+	The archive test found no errors	காப்பகச் சோதனையில் பிழைகள் எதுவும் கண்டறியப்படவில்லை
 #. text in extracting archives (a download's log, the Archive password window)
 #. in a download's log: the downloaded archive, after it was extracted
 #, machine
@@ -4999,6 +5140,11 @@
 #. text in errors.rs
 #, machine
 	the connection was lost while receiving data	தரவைப் பெறும்போது இணைப்பு துண்டிக்கப்பட்டது
+#. text in archtest.rs
+#. in a download's log: the bytes of the archive's damaged files couldn't be downloaded again; {error} why
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	The damaged parts couldn't be downloaded again: {error}	சேதமடைந்த பகுதிகளை மீண்டும் பதிவிறக்க முடியவில்லை: {error}
 #. text in torrent downloads
 #. files kept appearing while the user was confirming a torrent start; stop rather than repeat questions indefinitely
 #, machine
@@ -5221,6 +5367,10 @@
 #. Options → Accounts: the service doesn't say whether the account is premium (Mega-Debrid, signed in with an API key); a free account's links are refused when downloading
 #, machine
 	the service doesn't say whether it is premium	கணக்கு பிரீமியமா என்பதைச் சேவை குறிப்பிடவில்லை
+#. tooltip (why a control is greyed) in the Download video window
+#. why Part is greyed in Download video: the site doesn't say how long the video is (a live stream, for one)
+#, machine
+	The site doesn't say how long this video is	இந்த வீடியோ எவ்வளவு நேரம் நீடிக்கும் என்று தளம் கூறவில்லை
 #. text in errors.rs
 #. why a download failed (#701): a file host answered with its own web page (a countdown before the link, a captcha, a sign-in) where the file was expected. The browser gets past it; MDM's browser extension then hands the real file back to MDM
 #, machine
@@ -5463,6 +5613,7 @@
 	This name is reserved by Windows	இந்தப் பெயர் Windows ஆல் ஒதுக்கப்பட்டுள்ளது
 #. tooltip (why a control is greyed) in the Download video window
 #. why "Embed chapters" is greyed: ffmpeg (a helper program) is not installed
+#. why Part is greyed in Download video: ffmpeg (a helper program) is not installed
 #. why "Put them into the video" is greyed: ffmpeg (a helper program) is not installed
 #, machine
 	This needs ffmpeg	இதற்கு ffmpeg தேவை
@@ -5566,6 +5717,14 @@
 #. Linux, after a missing library's name: {command} = the terminal command that installs it ("sudo apt install libxkbcommon-x11-0"), left as it is
 #, machine
 	To install what's missing: {command}	விடுபட்டவற்றை நிறுவ: {command}
+#. text in the Download video window
+#. why Download Now is greyed in Download video: Part's To time is past the video's end
+#, machine
+	To is past the end of the video	இறுதி நேரம் வீடியோவின் முடிவுக்கு அப்பால் உள்ளது
+#. text in the Download video window
+#. why Download Now is greyed in Download video: Part's To time isn't after its From time
+#, machine
+	To must come after From	இறுதி நேரம் தொடக்க நேரத்துக்குப் பிறகு இருக்க வேண்டும்
 #. text in the Batch download window
 #, machine
 	To:	க்கு:
@@ -5753,6 +5912,10 @@
 #. why OK is greyed when naming a new queue
 #, machine
 	Type the queue's name	வரிசையின் பெயரைத் தட்டச்சு செய்க
+#. text in the Download video window
+#. why Download Now is greyed in Download video: a Part box holds something that isn't a time
+#, machine
+	Type the times as 1:30 or 1:02:03	நேரங்களை 1:30 அல்லது 1:02:03 என உள்ளிடவும்
 #. text in the Options window
 #. Options → Add an account: waiting while the user types the code at the service's page; {page} its address, {time} minutes:seconds left
 #. {time} = a time of day (keep the braces as they are)
@@ -5925,7 +6088,7 @@
 #. Options → Add an account: label before the field for the user name at the debrid service
 #, machine
 	User name:	பயனர் பெயர்:
-#. page title in the Options window
+#. page title in the Options window; text in the Options window
 #, machine
 	User names and passwords for servers/sites	சேவையகங்கள்/தளங்களுக்கான பயனர் பெயர்கள் மற்றும் கடவுச்சொற்கள்
 #. text in the Options window
@@ -6020,6 +6183,11 @@
 #. text in the Options window
 #, machine
 	Virus checking settings	வைரஸ் சரிபார்ப்பு அமைப்புகள்
+#. text in archtest.rs
+#. why a split archive (in several files, its volumes) isn't tested yet, in "{name} isn't complete ({why})"; {n} is the number of the volume not downloaded yet
+#. {n} = a number (keep the braces as they are)
+#, machine
+	volume {n} isn't there yet	{n} தொகுதி இன்னும் இல்லை
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: "); {n} is the volume's number
 #. {n} = a number (keep the braces as they are)
@@ -6343,7 +6511,7 @@
 #. Options → Remote → Pair a device: done; {device} = the name it was given
 #, machine
 	{device} is paired. It can control MDM now.	{device} இணைக்கப்பட்டுள்ளது. இது இப்போது MDM ஐக் கட்டுப்படுத்த முடியும்.
-#. text in remote.rs
+#. text in remote.rs; text in traypanel.rs
 #. remote control page (on a phone): progress; {done} and {size} are sizes ("1.2 MB of 7.5 MB")
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
@@ -6476,6 +6644,16 @@
 #. {name} = a file name (keep the braces as they are)
 #, machine
 	{name} is being downloaded already: try again in a moment	{name} ஏற்கனவே பதிவிறக்கப்படுகிறது: சிறிது நேரத்தில் மீண்டும் முயற்சிக்கவும்
+#. text in archtest.rs
+#. in the "Damaged archive" window: {name} is the archive's file name
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	{name} is damaged: its test found errors in it.	{name} சேதமடைந்துள்ளது: அதன் சோதனையில் பிழைகள் கண்டறியப்பட்டன.
+#. text in archtest.rs
+#. in the "Damaged archive" window: {name} is the archive's first volume's file name
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	{name} is damaged: its test found errors in one of its volumes.	{name} சேதமடைந்துள்ளது: அதன் தொகுதிகளில் ஒன்றில் பிழைகள் கண்டறியப்பட்டன.
 #. text in extracting archives (a download's log, the Archive password window)
 #. in Archive password: {name} is the archive's file name
 #. {name} = a file name (keep the braces as they are)
@@ -6571,6 +6749,10 @@
 #. text in errors.rs
 #, machine
 	{service} can't reach this file host right now; MDM will try again later	{service} இப்போது இந்தக் கோப்பு ஹோஸ்டை அணுக முடியவில்லை; MDM பின்னர் மீண்டும் முயற்சிக்கும்
+#. text in errors.rs
+#. a torrent through a debrid service: a file ticked in Add torrent isn't among the files the service has, so nothing was downloaded (rather than every file); {service} its name, {file} the file's path in the torrent
+#, machine
+	{service} doesn't list {file}, chosen in Add torrent: nothing was downloaded. Add the torrent again with all its files, or without this one	{service} ஆனது டோரண்டைச் சேர் என்பதில் தேர்ந்தெடுக்கப்பட்ட {file} ஐப் பட்டியலிடவில்லை: எதுவும் பதிவிறக்கப்படவில்லை. எல்லா கோப்புகளுடனோ அல்லது இந்தக் கோப்பு இல்லாமலோ டோரண்டை மீண்டும் சேர்க்கவும்
 #. text in errors.rs
 #. a debrid service's error: it isn't answering
 #, machine
@@ -6861,6 +7043,11 @@ extension	Done	முடிந்தது
 #. button beside a video, sound or stream in the toolbar button's popup: download it with the app; verb; short
 #, machine
 extension	Download	பதிவிறக்கவும்
+#. text in the browser extension
+#. command in the menu of the download button over a video: opens the app's Download video window with Part ticked, From set to where the video is playing now, to download only a part of it
+#. the trailing ... means it is still going on: keep it
+#, machine
+extension	Download a part from here...	இங்கிருந்து ஒரு பகுதியைப் பதிவிறக்கவும்...
 #. text in the browser extension
 #. command in the Downloads tab of the toolbar button's popup (the list of Mister Download Manager's newest downloads): downloads the file again from the start
 #, machine
@@ -8188,6 +8375,10 @@ menu	Te&xt	உரை(&X)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Tell a &friend	ஒரு &நண்பருக்குத் தெரிவி
+#. menu command in the main window
+#. verb: read the downloaded archive (zip, 7z, rar) back and check that none of its files is damaged
+#, machine
+menu	Test archive	காப்பகத்தைச் சரிபார்க்கவும்
 #. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: the graphics card stopped working twice (a driver update or reset)
 #, machine

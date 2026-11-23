@@ -12,6 +12,11 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	An unknown site wants to send {n} link to Link grabber.|An unknown site wants to send {n} links to Link grabber.	एक अज्ञात साइट लिंक ग्रैबर को {n} लिंक भेजना चाहती है।|एक अज्ञात साइट लिंक ग्रैबर को {n} लिंक भेजना चाहती है।
+#. count in traypanel.rs
+#. the notification-area icon's panel (#1365), under the downloads it lists: how many others are running; {n} a number
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	And {n} more|And {n} more	और {n} अन्य|और {n} अन्य
 #. count in torrent downloads
 #. number of additional files in a list of files
 #. {n} = a number (keep the braces as they are)
@@ -49,6 +54,11 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 @plural	Matches {n} article now (it adds new ones only):|Matches {n} articles now (it adds new ones only):	अब {n} लेख से मेल खाता है (यह केवल नए जोड़ता है):|अब {n} लेखों से मेल खाता है (यह केवल नए जोड़ता है):
+#. count in archtest.rs
+#. in a download's log: the archive test found files in it that don't read back whole; {n} how many, {files} their names
+#. {n} = a number (keep the braces as they are)
+#, machine
+@plural	The archive test found {n} damaged file: {files}|The archive test found {n} damaged files: {files}	संग्रह परीक्षण में {n} क्षतिग्रस्त फ़ाइल मिली: {files}|संग्रह परीक्षण में {n} क्षतिग्रस्त फ़ाइलें मिलीं: {files}
 #. count in a dialog box
 #. Cancel in Download File Info with downloads waiting behind it
 #. {n} = a number (keep the braces as they are)
@@ -227,6 +237,11 @@
 #. a 24-hour clock, with an example
 #, machine
 	24-hour (21:41)	24-घंटे (21:41)
+#. text in archtest.rs
+#. why an archive wasn't tested (after "Couldn't test {name}: "); 7-Zip is a program's name, {error} its words, in English
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	7-Zip couldn't test it ({error})	7-Zip इसका परीक्षण नहीं कर सका ({error})
 #. window title in extracting archives (a download's log, the Archive password window)
 #. window title: 7-Zip (a program's name) must be installed
 #, machine
@@ -278,6 +293,14 @@
 #. Options → DNS: the NextDNS configuration ID typed isn't one
 #, machine
 	A NextDNS configuration ID is six letters and digits (0-9, a-f).	NextDNS कॉन्फ़िगरेशन ID छह अक्षर और अंक (0-9, a-f) का होता है।
+#. text in the Download video window
+#. why "Embed chapters" (and the subtitles) are greyed in Download video: only a part of the video is downloaded, and its chapters and subtitles would be the whole video's
+#, machine
+	A part is saved without the video's chapters and subtitles	वीडियो का एक हिस्सा अध्यायों और उपशीर्षकों के बिना सहेजा जाता है
+#. text in the Download video window
+#. why Part is greyed in Download video: the page is a playlist, whose videos are downloaded whole
+#, machine
+	A playlist's videos are downloaded whole	प्लेलिस्ट के वीडियो पूरे डाउनलोड किए जाते हैं
 #. text in the Options window
 #. Options → Sites Logins → Cookies for video sites: the tooltip of the profile box
 #, machine
@@ -314,6 +337,10 @@
 #. why an archive wasn't extracted (after "Couldn't extract {name}: ")
 #, machine
 	a volume of it is missing	इसका एक वॉल्यूम गुम है
+#. text in archtest.rs
+#. why a split archive (in several files, its volumes) isn't tested yet, in "{name} isn't complete ({why})": one of its files isn't downloaded yet
+#, machine
+	a volume of it isn't there yet	इसका एक वॉल्यूम अभी तक मौजूद नहीं है
 #. window title in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #, machine
 	About Mister Download Manager	Mister Download Manager के बारे में
@@ -322,6 +349,7 @@
 #, machine
 	about {ms} ms ({reach})	लगभग {ms} मि.से. ({reach})
 #. text in the Download video window
+#. in Download video beside the part's From and To: the part's size, estimated from the whole video's; {size} is "12.3 MB"
 #. a file size that is only an estimate, as a screen reader says it in the Download video window's list of qualities; {size} is "532 MB"
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
@@ -888,7 +916,7 @@
 #. a country's name (where a download's server is)
 #, machine
 	Canada	कनाडा
-#. button in the Batch download window; button in categories.rs; text in the Checksum window; button in a dialog box; button in extracting archives (a download's log, the Archive password window); button in the Find window; button in gallerydlg.rs; text in the Link grabber window; text in the Help menu's windows (About, updates, shortcuts, Tell a friend); button in langpick.rs; button in the Options window; button in a download's progress window; text in remote.rs; button in the Scheduler window; button in the Add torrent window; button in the Download video window
+#. button in the Batch download window; button in categories.rs; text in the Checksum window; button in a dialog box; button in extracting archives (a download's log, the Archive password window); button in the Find window; button in gallerydlg.rs; text in the Link grabber window; text in the Help menu's windows (About, updates, shortcuts, Tell a friend); button in langpick.rs; button in the Options window; button in a download's progress window; text in remote.rs; button in the Scheduler window; button in the Add torrent window; button in traypanel.rs; button in the Download video window
 #. button: stop downloading the update
 #, machine
 	Cancel	रद्द करें
@@ -986,6 +1014,10 @@
 #. text in helpers.rs
 #, machine
 	Check your connection, then try again, or get them later from the video window.	अपना कनेक्शन जाँचें, फिर पुनः प्रयास करें, या बाद में वीडियो विंडो से प्राप्त करें।
+#. text in the Options window
+#. tooltip of "Show downloads when the notification area icon is clicked": what the click on MDM's tray icon does when it is ticked and when not
+#, machine
+	Checked, a click on MDM's icon shows what is downloading, with Pause and Cancel, and a double click opens the window; unchecked, a click shows or hides the window	चेक होने पर, MDM के आइकन पर क्लिक करने से डाउनलोड हो रही चीज़ें, रोकें और रद्द करें के विकल्पों के साथ दिखती हैं, और डबल क्लिक करने पर विंडो खुलती है; अनचेक होने पर, क्लिक करने से विंडो दिखती या छिपती है
 #. text in the Options window
 #. tooltip of the close-setting: checked keeps MDM running when the window closes, in the notification area when available or else the taskbar; downloads continue; unchecked closing quits
 #, machine
@@ -1101,7 +1133,7 @@
 #. text in the Options window
 #, machine
 	Clock:	घड़ी:
-#. text in the Checksum window; text in the main window (menus, toolbar, Categories pane); button in crashui.rs; button in a dialog box; button in extension.rs; button in the Help menu's windows (About, updates, shortcuts, Tell a friend); button in helpers.rs; button in the download list; button in the Options window; button in rssdlg.rs; button in torrentfiles.rs; text in standard windows
+#. text in archtest.rs; text in the Checksum window; text in the main window (menus, toolbar, Categories pane); button in crashui.rs; button in a dialog box; button in extension.rs; button in the Help menu's windows (About, updates, shortcuts, Tell a friend); button in helpers.rs; button in the download list; button in the Options window; button in rssdlg.rs; button in torrentfiles.rs; text in traypanel.rs; text in standard windows
 #. both verbs: Verify = check the file now; Close = close the window
 #. tooltip of the × that closes the Categories pane
 #. verb: closes this window
@@ -1251,6 +1283,11 @@
 #. {name} = a file name; {error} = an error message (keep the braces as they are)
 #, machine
 	Couldn't look for a newer {name}: {error}	नया {name} ढूँढ़ा नहीं जा सका: {error}
+#. text in archtest.rs
+#. in a download's log: {name} is the archive's file name, {why} the reason it wasn't tested (as after "Couldn't extract {name}: ")
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Couldn't test {name}: {why}	{name} का परीक्षण नहीं किया जा सका: {why}
 #. checkbox in the Add torrent window
 #. Add torrent: keep a multi-file torrent inside its own outer folder; untick to use Save to directly
 #, machine
@@ -1298,6 +1335,18 @@
 #. adverb: every day (the other choice is once, on a date)
 #, machine
 	Daily	दैनिक
+#. text in the download list (sizes, speeds, status)
+#. a download's status: its archive's test (Options → Archives) found it damaged. One short word: the list's Status column is narrow
+#, machine
+	Damaged	क्षतिग्रस्त
+#. window title in archtest.rs
+#. window title: an archive (zip, 7z, rar) that was downloaded is damaged
+#, machine
+	Damaged archive	क्षतिग्रस्त संग्रह
+#. text in the download list (sizes, speeds, status)
+#. a download's status, whole (the Status cell's tip): its archive's test found it damaged; "Redownload" is the right-click command
+#, machine
+	Damaged: its archive test found errors. Right-click → Redownload downloads it again	क्षतिग्रस्त: इसके संग्रह परीक्षण में त्रुटियाँ मिलीं। राइट-क्लिक करें → फिर से डाउनलोड करें, इसे फिर से डाउनलोड करता है
 #. text in the Options window
 #, machine
 	Date order:	दिनांक क्रम:
@@ -1308,7 +1357,7 @@
 #. a date's order: day first (30/10/2026)
 #, machine
 	Day, month, year	दिन, महीना, वर्ष
-#. page title in the Options window
+#. page title in the Options window; text in the Options window
 #, machine
 	Debrid service accounts	डीब्रिड सेवा खाते
 #. text in the Scheduler window
@@ -1498,14 +1547,6 @@
 #. window title in a dialog box
 #, machine
 	Download later	बाद में डाउनलोड करें
-#. text in the Scheduler's download limits
-#. a11y name of the second Download limits box, where "every {n} hours" puts its {n}
-#, machine
-	Download limit: every how many hours	डाउनलोड सीमा: कितने घंटे पर
-#. text in the Scheduler's download limits
-#. a11y name of the first Download limits box, where "Download no more than {n} MBytes" puts its {n}
-#, machine
-	Download limit: MBytes	डाउनलोड सीमा: MBytes
 #. window title in a dialog box; text in the Options window; checkbox in the Options window; text in the Scheduler window
 #. the Scheduler's page (and checkbox) that caps how much is downloaded in a time
 #, machine
@@ -1601,6 +1642,11 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Downloading MDM's own copy...	MDM की अपनी कॉपी डाउनलोड की जा रही है...
+#. text in archtest.rs
+#. in a download's log: after its archive test found damaged files, only their bytes are downloaded again from the same server; {size} like "1.20 MB"
+#. {size} = a file size such as "4.2 MB" (keep the braces as they are)
+#, machine
+	Downloading the damaged parts again ({size})	क्षतिग्रस्त भागों को फिर से डाउनलोड किया जा रहा है ({size})
 #. text in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #. Check for updates, while Update now downloads; {percent} like "42%"
 #, machine
@@ -1630,8 +1676,9 @@
 #. the notice shown once, the first time a download comes from a browser's private (incognito) window: it stays in MDM's list like any other, after a restart too; where to turn that off. {options} = the Options window, {general} = its General tab, {checkbox} = the checkbox "Keep private-window downloads in the list"
 #, machine
 	Downloads from a browser's private window stay in MDM's list like any other, also after MDM restarts; their cookies are never saved. To keep them in memory only, untick {options} → {general} → {checkbox}.	ब्राउज़र की निजी विंडो से किए गए डाउनलोड MDM की सूची में बाकी डाउनलोड की तरह ही रहते हैं, MDM के पुनरारंभ होने के बाद भी; उनकी कुकीज़ कभी सहेजी नहीं जातीं। उन्हें केवल मेमोरी में रखने के लिए, {options} → {general} → {checkbox} का चयन हटाएँ।
-#. text in the tray icon's menu
+#. text in the tray icon's menu; text in traypanel.rs
 #. tray menu: a submenu of the downloads now running; choosing one shows its progress window
+#. the notification-area icon's panel (#1365): its title, over the downloads now running (also the tray menu's submenu)
 #, machine
 	Downloads in progress	प्रगति में डाउनलोड
 #. text in a dialog box
@@ -1798,6 +1845,10 @@
 #. what a keyboard shortcut does in the Help menu's windows (About, updates, shortcuts, Tell a friend)
 #, machine
 	Everything at its normal size (100%)	सब कुछ सामान्य आकार (100%) में
+#. text in the Download video window
+#. choice in Download video's Part: the part is encoded again so it starts and ends exactly at From and To (slower)
+#, machine
+	Exact cut, encoded again	सटीक कट, फिर से एन्कोड किया जाता है
 #. text in the Options window
 #. label before an example date and time written the chosen way
 #, machine
@@ -1882,6 +1933,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Faroe Islands	फ़ैरो द्वीप समूह
+#. text in the Download video window
+#. tooltip of "Quick cut, at keyframes" in Download video: what it does
+#, machine
+	Fast: the streams are copied as they are, so the part may start a little before From	तेज़: स्ट्रीम्स को वैसे ही कॉपी किया जाता है, इसलिए भाग From से थोड़ा पहले शुरू हो सकता है
 #. text in the Scheduler window
 #, machine
 	February	फ़रवरी
@@ -2133,6 +2188,10 @@
 #. message or event log entry in the main window
 #, machine
 	from the command line	कमांड लाइन से
+#. text in the Download video window
+#. in Download video after "Only a part": {from} and {to} are boxes where times are typed (1:30, 1:02:03), drawn where they stand in the translation
+#, machine
+	from {from} to {to}	{from} से {to} तक
 #. text in the Batch download window
 #, machine
 	From:	से:
@@ -3341,6 +3400,10 @@
 #. message or event log entry in the main window
 #, machine
 	No download links were found in the clipboard. Copy a text with http, https, ftp or magnet links in it, and try again.	क्लिपबोर्ड में कोई डाउनलोड लिंक नहीं मिला। इसमें http, https, ftp या मैग्नेट लिंक वाला टेक्स्ट कॉपी करें, और फिर से प्रयास करें।
+#. text in traypanel.rs
+#. the notification-area icon's panel (#1365) when no download is running
+#, machine
+	No downloads are running	कोई डाउनलोड नहीं चल रहा है
 #. message or event log entry in the main window
 #. title in the empty download list (this category or queue has no downloads)
 #, machine
@@ -3500,6 +3563,15 @@
 #. Options → Accounts: the service doesn't take this file host (shouldn't happen when signing in)
 #, machine
 	not supported by this service	इस सेवा द्वारा समर्थित नहीं है
+#. text in archtest.rs
+#. in a download's log and the Test archive message: a split archive is tested only once every volume is downloaded; {name} is its file name, {why} which volume is missing
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	Not tested yet: {name} isn't complete ({why})	अभी तक परीक्षण नहीं किया गया: {name} अधूरा है ({why})
+#. text in archtest.rs
+#. in a download's log: an archive larger than Options → Archives' limit for its test wasn't tested; {limit} like "4.00 GB"; "Test archive" is the right-click command
+#, machine
+	Not tested: it is larger than {limit} (Options → Archives). Right-click → Test archive tests it	परीक्षण नहीं किया गया: यह {limit} (विकल्प → संग्रह) से बड़ा है। राइट-क्लिक करें → संग्रह का परीक्षण करें, इसका परीक्षण करता है
 #. text in the Options window
 #, machine
 	Not used: file parts are written next to the file	उपयोग नहीं किया गया: फ़ाइल के भाग फ़ाइल के बगल में लिखे जाते हैं
@@ -3615,6 +3687,10 @@
 #. message or event log entry in the main window
 #, machine
 	Only a finished download, or one not started yet, can be moved. Stop it and finish it first.	केवल पूरा हो चुका या अभी शुरू न हुआ डाउनलोड ही स्थानांतरित किया जा सकता है। पहले इसे रोकें और पूरा करें।
+#. text in the Download video window
+#. checkbox in Download video: download only a part of the video or sound; the From and To boxes follow it
+#, machine
+	Only a part	केवल एक भाग
 #. text in the Scheduler window
 #. the Scheduler, under "Wake the computer to run this queue" (Linux): the computer's wake alarm can be set by an administrator only
 #, machine
@@ -3632,6 +3708,10 @@
 #. {n} = a number (keep the braces as they are)
 #, machine
 	Only the first {n} videos are listed.	केवल पहले {n} वीडियो सूचीबद्ध हैं।
+#. message or event log entry in the main window
+#. event log: a torrent through a debrid account gets only the files ticked in Add torrent; {files} how many ("3")
+#, machine
+	Only the {files} file(s) ticked in Add torrent	Add torrent में केवल {files} फ़ाइलें चिह्नित की गईं
 #. checkbox in a dialog box
 #, machine
 	Only while I'm using the computer	केवल कंप्यूटर का उपयोग करते समय
@@ -3656,7 +3736,8 @@
 #. checkbox in the Add torrent window
 #, machine
 	Open magnet links and .torrent files with Mister Download Manager	Mister Download Manager के साथ मैग्नेट लिंक और .torrent फ़ाइलें खोलें
-#. text in the tray icon's menu
+#. text in the tray icon's menu; text in traypanel.rs
+#. the notification-area icon's panel (#1365): its button that opens the main window (also the tray menu's first item)
 #, machine
 	Open Mister Download Manager	Mister Download Manager खोलें
 #. text in extension.rs
@@ -3766,6 +3847,10 @@
 #. a country's name (where a download's server is)
 #, machine
 	Paraguay	पैराग्वे
+#. text in the Download video window
+#. label in Download video before the choice to download only a part of the video or sound (from one time to another)
+#, machine
+	Part	भाग
 #. text in the Batch download window; text in a dialog box; label in the Options window; text in the Options window; text in a download's Properties window
 #, machine
 	Password	पासवर्ड
@@ -3962,6 +4047,10 @@
 #. plural noun: the download queues
 #, machine
 	Queues	कतारें
+#. text in the Download video window
+#. choice in Download video's Part: cut where the video has a keyframe, the streams copied as they are (fast; it may start a little before From)
+#, machine
+	Quick cut, at keyframes	त्वरित कट, कीफ्रेम पर
 #. text in the Options window
 #. Options → Sites Logins → Cookies for video sites: a note under the choices
 #, machine
@@ -4013,10 +4102,18 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Recording...	रिकॉर्ड हो रहा है...
-#. message or event log entry in the main window
+#. message or event log entry in the main window; text in archtest.rs
 #. window title, verb: download the file again from the start
 #, machine
 	Redownload	फिर से डाउनलोड करें
+#. text in archtest.rs
+#. in the "Damaged archive" window, under what was found; "Redownload" is the button beside
+#, machine
+	Redownload downloads every volume again from the start.	फिर से डाउनलोड करें पर क्लिक करने से हर वॉल्यूम शुरू से डाउनलोड होता है।
+#. text in archtest.rs
+#. in the "Damaged archive" window, under what was found; "Redownload" is the button beside
+#, machine
+	Redownload downloads it again from the start.	फिर से डाउनलोड करें पर क्लिक करने से यह शुरू से डाउनलोड होता है।
 #. text in a download's Properties window
 #, machine
 	Referer:	रेफ़रर:
@@ -4420,6 +4517,10 @@
 #. checkbox in the Options window
 #, machine
 	Show download progress dialog when a download starts	डाउनलोड शुरू होने पर डाउनलोड प्रगति डायलॉग दिखाएँ
+#. text in the Options window
+#. checkbox: a click on MDM's icon in the notification area (system tray) shows a small panel over it with the downloads now running, their progress, Pause and Cancel; unticked, the click shows or hides the main window
+#, machine
+	Show downloads when the notification area icon is clicked	सूचना क्षेत्र आइकन पर क्लिक करने पर डाउनलोड दिखाएँ
 #. button in a dialog box
 #. button: shows these downloads in MDM's list, selected
 #, machine
@@ -4576,6 +4677,10 @@
 #. legend: pieces partly downloaded
 #, machine
 	Some	कुछ
+#. text in archtest.rs
+#. why a split archive (in several files, its volumes) isn't tested yet, in "{name} isn't complete ({why})": some of its files are still downloading or waiting in the list
+#, machine
+	some of its volumes are still downloading	इसके कुछ वॉल्यूम अभी भी डाउनलोड हो रहे हैं
 #. text in a dialog box
 #, machine
 	Some of the torrent's files are already in this folder:	टॉरेंट की कुछ फ़ाइलें पहले से ही इस फ़ोल्डर में हैं:
@@ -4712,6 +4817,10 @@
 #. the trailing ... means it is still going on: keep it
 #, machine
 	Starting...	शुरू हो रहा है...
+#. text in the Download video window
+#. tooltip of "Exact cut, encoded again" in Download video: what it does
+#, machine
+	Starts and ends exactly at From and To: ffmpeg encodes the part again, which takes longer	From और To पर ठीक से शुरू और समाप्त होता है: ffmpeg भाग को फिर से एन्कोड करता है, जिसमें अधिक समय लगता है
 #. text in the Options window
 #. column title: the account's state (premium, days left)
 #, machine
@@ -4875,6 +4984,13 @@
 #. button: asks the chosen DNS for an address, to see it works
 #, machine
 	Test	परीक्षण करें
+#. message or event log entry in the main window
+#, machine
+	Test archive	संग्रह का परीक्षण करें
+#. text in the Options window
+#. Options → Archives check box with a number box in it: {gb} is the box (a size in gigabytes, 4 at first); the words before it are the check box's caption, those after it follow the box, on one line. A test reads the archive back whole and checks it before its download counts as done
+#, machine
+	Test archives when their download completes, up to {gb} GB	डाउनलोड पूरा होने पर संग्रह का परीक्षण करें, {gb} GB तक
 #. window title in the Options window
 #. window title: Options → General → Test browser integration
 #, machine
@@ -4883,6 +4999,19 @@
 #. the trailing ... means it opens a window: keep it
 #, machine
 	Test browser integration...	ब्राउज़र एकीकरण का परीक्षण करें...
+#. text in archtest.rs
+#. in a download's log: the archive's damaged parts were downloaded again, and its test now finds no error
+#, machine
+	Tested again: the archive has no errors now	फिर से परीक्षण किया गया: संग्रह में अब कोई त्रुटि नहीं है
+#. text in archtest.rs; text in the download list (sizes, speeds, status)
+#. in a download's log: its archive is being tested (read back and checked) before the download counts as done
+#. the trailing ... means it is still going on: keep it
+#, machine
+	Testing the archive...	संग्रह का परीक्षण किया जा रहा है...
+#. text in the download list (sizes, speeds, status)
+#. a download's status while its archive (zip, 7z, rar) is read back and checked before the download counts as done; {percent} how far, e.g. "45%"
+#, machine
+	Testing the archive... ({percent})	संग्रह का परीक्षण किया जा रहा है... ({percent})
 #. text in the Scheduler window
 #. Thursday, as short as a calendar's column head (two letters in English)
 #, machine
@@ -4899,6 +5028,10 @@
 #. Options → Archives, in red: the program chosen with "Use another program..." isn't 7-Zip's command line program (an archiver's window was picked instead); 7z.exe is that program's file name
 #, machine
 	That isn't 7-Zip's command line program (7z.exe).	वह 7-Zip का कमांड-लाइन प्रोग्राम (7z.exe) नहीं है।
+#. text in the Download video window
+#. why Download Now is greyed in Download video: Part's times are the whole video's (untick Only a part to download it whole)
+#, machine
+	That's the whole video: change From or To, or untick Only a part	यह पूरा वीडियो है: From या To बदलें, या केवल एक हिस्से का विकल्प हटाएँ
 #. text in torrent downloads
 #. an error: the copy of the .torrent file the app keeps is missing
 #, machine
@@ -4912,6 +5045,14 @@
 #. text in extracting archives (a download's log, the Archive password window)
 #, machine
 	The archive could not be moved to the Trash: it was kept	संग्रह को ट्रैश में नहीं ले जाया जा सका: इसे रखा गया है
+#. text in archtest.rs
+#. in a download's log: the archive's own structure doesn't read back (its headers, its end), or it isn't the archive its name says
+#, machine
+	The archive test failed: it is damaged, or not the archive its name says	संग्रह परीक्षण विफल रहा: यह क्षतिग्रस्त है, या वह संग्रह नहीं है जिसका नाम यह कहता है
+#. text in archtest.rs
+#. in a download's log: the archive was read back whole and checked
+#, machine
+	The archive test found no errors	संग्रह परीक्षण में कोई त्रुटि नहीं मिली
 #. text in extracting archives (a download's log, the Archive password window)
 #. in a download's log: the downloaded archive, after it was extracted
 #, machine
@@ -4999,6 +5140,11 @@
 #. text in errors.rs
 #, machine
 	the connection was lost while receiving data	डेटा प्राप्त करते समय कनेक्शन टूट गया
+#. text in archtest.rs
+#. in a download's log: the bytes of the archive's damaged files couldn't be downloaded again; {error} why
+#. {error} = an error message (keep the braces as they are)
+#, machine
+	The damaged parts couldn't be downloaded again: {error}	क्षतिग्रस्त भागों को फिर से डाउनलोड नहीं किया जा सका: {error}
 #. text in torrent downloads
 #. files kept appearing while the user was confirming a torrent start; stop rather than repeat questions indefinitely
 #, machine
@@ -5221,6 +5367,10 @@
 #. Options → Accounts: the service doesn't say whether the account is premium (Mega-Debrid, signed in with an API key); a free account's links are refused when downloading
 #, machine
 	the service doesn't say whether it is premium	सेवा यह नहीं बताती कि खाता प्रीमियम है या नहीं
+#. tooltip (why a control is greyed) in the Download video window
+#. why Part is greyed in Download video: the site doesn't say how long the video is (a live stream, for one)
+#, machine
+	The site doesn't say how long this video is	साइट यह नहीं बताती कि यह वीडियो कितना लंबा है
 #. text in errors.rs
 #. why a download failed (#701): a file host answered with its own web page (a countdown before the link, a captcha, a sign-in) where the file was expected. The browser gets past it; MDM's browser extension then hands the real file back to MDM
 #, machine
@@ -5463,6 +5613,7 @@
 	This name is reserved by Windows	यह नाम Windows द्वारा आरक्षित है
 #. tooltip (why a control is greyed) in the Download video window
 #. why "Embed chapters" is greyed: ffmpeg (a helper program) is not installed
+#. why Part is greyed in Download video: ffmpeg (a helper program) is not installed
 #. why "Put them into the video" is greyed: ffmpeg (a helper program) is not installed
 #, machine
 	This needs ffmpeg	इसके लिए ffmpeg चाहिए
@@ -5566,6 +5717,14 @@
 #. Linux, after a missing library's name: {command} = the terminal command that installs it ("sudo apt install libxkbcommon-x11-0"), left as it is
 #, machine
 	To install what's missing: {command}	गुम लाइब्रेरी इंस्टॉल करने के लिए: {command}
+#. text in the Download video window
+#. why Download Now is greyed in Download video: Part's To time is past the video's end
+#, machine
+	To is past the end of the video	To वीडियो के अंत से आगे है
+#. text in the Download video window
+#. why Download Now is greyed in Download video: Part's To time isn't after its From time
+#, machine
+	To must come after From	To का समय From के बाद होना चाहिए
 #. text in the Batch download window
 #, machine
 	To:	इस पर:
@@ -5753,6 +5912,10 @@
 #. why OK is greyed when naming a new queue
 #, machine
 	Type the queue's name	कतार का नाम टाइप करें
+#. text in the Download video window
+#. why Download Now is greyed in Download video: a Part box holds something that isn't a time
+#, machine
+	Type the times as 1:30 or 1:02:03	समय 1:30 या 1:02:03 के रूप में टाइप करें
 #. text in the Options window
 #. Options → Add an account: waiting while the user types the code at the service's page; {page} its address, {time} minutes:seconds left
 #. {time} = a time of day (keep the braces as they are)
@@ -5925,7 +6088,7 @@
 #. Options → Add an account: label before the field for the user name at the debrid service
 #, machine
 	User name:	उपयोगकर्ता नाम:
-#. page title in the Options window
+#. page title in the Options window; text in the Options window
 #, machine
 	User names and passwords for servers/sites	सर्वर/साइटों के लिए उपयोगकर्ता नाम और पासवर्ड
 #. text in the Options window
@@ -6020,6 +6183,11 @@
 #. text in the Options window
 #, machine
 	Virus checking settings	वायरस जाँच सेटिंग्स
+#. text in archtest.rs
+#. why a split archive (in several files, its volumes) isn't tested yet, in "{name} isn't complete ({why})"; {n} is the number of the volume not downloaded yet
+#. {n} = a number (keep the braces as they are)
+#, machine
+	volume {n} isn't there yet	वॉल्यूम {n} अभी तक मौजूद नहीं है
 #. text in extracting archives (a download's log, the Archive password window)
 #. why an archive wasn't extracted (after "Couldn't extract {name}: "); {n} is the volume's number
 #. {n} = a number (keep the braces as they are)
@@ -6343,7 +6511,7 @@
 #. Options → Remote → Pair a device: done; {device} = the name it was given
 #, machine
 	{device} is paired. It can control MDM now.	{device} युग्मित है। यह अब MDM को नियंत्रित कर सकता है।
-#. text in remote.rs
+#. text in remote.rs; text in traypanel.rs
 #. remote control page (on a phone): progress; {done} and {size} are sizes ("1.2 MB of 7.5 MB")
 #. {size} = a file size such as "4.2 MB" (keep the braces as they are)
 #, machine
@@ -6476,6 +6644,16 @@
 #. {name} = a file name (keep the braces as they are)
 #, machine
 	{name} is being downloaded already: try again in a moment	{name} पहले से डाउनलोड हो रहा है: थोड़ी देर में फिर से कोशिश करें
+#. text in archtest.rs
+#. in the "Damaged archive" window: {name} is the archive's file name
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	{name} is damaged: its test found errors in it.	{name} क्षतिग्रस्त है: इसके परीक्षण में इसमें त्रुटियाँ मिलीं।
+#. text in archtest.rs
+#. in the "Damaged archive" window: {name} is the archive's first volume's file name
+#. {name} = a file name (keep the braces as they are)
+#, machine
+	{name} is damaged: its test found errors in one of its volumes.	{name} क्षतिग्रस्त है: इसके परीक्षण में इसके एक वॉल्यूम में त्रुटियाँ मिलीं।
 #. text in extracting archives (a download's log, the Archive password window)
 #. in Archive password: {name} is the archive's file name
 #. {name} = a file name (keep the braces as they are)
@@ -6571,6 +6749,10 @@
 #. text in errors.rs
 #, machine
 	{service} can't reach this file host right now; MDM will try again later	{service} अभी इस फ़ाइल होस्ट तक नहीं पहुँच सकता; MDM बाद में फिर से कोशिश करेगा
+#. text in errors.rs
+#. a torrent through a debrid service: a file ticked in Add torrent isn't among the files the service has, so nothing was downloaded (rather than every file); {service} its name, {file} the file's path in the torrent
+#, machine
+	{service} doesn't list {file}, chosen in Add torrent: nothing was downloaded. Add the torrent again with all its files, or without this one	{service} की सूची में {file} नहीं है, जिसे Add torrent में चुना गया था: कुछ भी डाउनलोड नहीं किया गया। सभी फ़ाइलों के साथ, या इस फ़ाइल के बिना, टॉरेंट फिर से जोड़ें
 #. text in errors.rs
 #. a debrid service's error: it isn't answering
 #, machine
@@ -6861,6 +7043,11 @@ extension	Done	पूरा हुआ
 #. button beside a video, sound or stream in the toolbar button's popup: download it with the app; verb; short
 #, machine
 extension	Download	डाउनलोड करें
+#. text in the browser extension
+#. command in the menu of the download button over a video: opens the app's Download video window with Part ticked, From set to where the video is playing now, to download only a part of it
+#. the trailing ... means it is still going on: keep it
+#, machine
+extension	Download a part from here...	यहां से एक भाग डाउनलोड करें...
 #. text in the browser extension
 #. command in the Downloads tab of the toolbar button's popup (the list of Mister Download Manager's newest downloads): downloads the file again from the start
 #, machine
@@ -8183,6 +8370,10 @@ menu	Te&xt	टेक्स्ट(&X)
 #. & marks the keyboard shortcut letter: keep one & before a letter of the translation
 #, machine
 menu	Tell a &friend	किसी दोस्त को बताएँ(&f)
+#. menu command in the main window
+#. verb: read the downloaded archive (zip, 7z, rar) back and check that none of its files is damaged
+#, machine
+menu	Test archive	संग्रह का परीक्षण करें
 #. menu command in the main window
 #. View → Draw with: a greyed note under "… didn't start here"; why: the graphics card stopped working twice (a driver update or reset)
 #, machine
